@@ -56,8 +56,11 @@
         (stroke "rgba(255,255,255,1)" 1)
         (fill false)
         (circle c))
-    (for [x (range 5)] 
-      (.. form (circle (.. (js/Circle. (+ (* 10 x) p)) (setRadius r)))))))
+    (loop [x 8] 
+      (if (> x 0)
+        (do 
+          (.. form (circle (.. (js/Circle. (.. p ($add x x))) (setRadius r))))
+          (recur (dec x)))))))
 
 (defn draw-line
   [form from to]
@@ -70,14 +73,14 @@
 (defn draw-text
   [form p t]
   (let [[x y] p]
-  (.. form (fill "white") (text (js/Point. t y) (str t)))))
+  (.. form (fill "white") (text (js/Point. t y) (str t) 1000 10 -10))))
 
 (defonce timer (r/atom 0))
 
 (defn draw-entity
   [form from to tt]
   (do 
-    (draw-circle form (js/Point. (clj->js to)) 5)
+    (draw-circle form (js/Vector. (clj->js to)) 5)
     (draw-text form to tt)
     (draw-line form from to)))
 
@@ -114,7 +117,7 @@
   ([time form w h s]
     (.clearRect (.-ctx space) 0 0 3000 3000)
     (doall (map 
-             #(draw-entity form [0 (/ h 2)] [@rot (get % 3)] @rot)
+             #(draw-entity form [(/ w 2) (/ h 2)] [@rot (get % 3)] @rot)
              (dots-from-data data)))
     (swap! timer inc)
     (.requestAnimationFrame js/window #(draw % form w h s)))
