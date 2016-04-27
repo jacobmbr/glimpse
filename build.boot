@@ -15,6 +15,8 @@
                  [org.clojure/tools.nrepl "0.2.12"]    ;; needed by bREPL
                  [org.clojars.magomimmo/domina "2.0.0-SNAPSHOT"]
                  [hiccups "0.3.0"]
+                 [reagent "0.6.0-alpha"]
+                 [timothypratley/reanimated "0.1.4"]
                  ])
 
 (require '[adzerk.boot-cljs :refer [cljs]]
