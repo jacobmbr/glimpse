@@ -17,15 +17,52 @@
 (devtools/install! [:sanity-hints :custom-formatters])
 (def log #(.log js/console %))
 
-(def data [["domain8", 1, true] ["domain8", 1, true] ["domain1", 3, true] ["domain2", 6, true]])
+(def data [["domain8", 1, true] 
+           ["domain8", 1, true] 
+           ["domain1", 3, true] 
+           ["facebook", 3, true] 
+           ["domain1", 3, true] 
+           ["domain1", 3, true] 
+           ["domain1", 3, true] 
+           ["domain1", 15, true] 
+           ["myspace", 15, true] 
+           ["domain1", 15, true] 
+           ["domain1", 3, true] 
+           ["domain1", 3, true] 
+           ["domain1", 3, true] 
+           ["domain1", 7, true] 
+           ["domain1", 7, true] 
+           ["domain1", 7, true] 
+           ["domain1", 3, true] 
+           ["domain2", 6, true]])
 
 (defonce resize-chan (chan))
 (defonce dim (r/atom {:w 0 :h 0}))
 
+(def shift (r/atom 0))
+(def rot (anim/spring shift))
+
+(def offset (r/atom 0))
+(def ospring (anim/spring offset))
+
+(def state-chan (chan)) 
+
+(defn switch-state
+  [chan]
+  (go-loop []
+    (<! chan)
+    (println "hu")
+    (swap! shift #(condp = %
+                     0 1
+                     1 -1
+                     -1 0))
+    (recur)))
+(switch-state state-chan)
 
 (defn add-image-listeners []
   (do
     (.. js/window (addEventListener "resize" (fn [e] (go (>! resize-chan "hu")))))
+    (.. js/window (addEventListener "mousedown" (fn [e] (go (>! state-chan "hu")))))
     (evt/listen!
     js/body
     :mousemove
@@ -68,28 +105,17 @@
     #(conj %1 (conj %2 (* (+ 0.5 (count %1)) (/ h (count data)))))
     [] data)))
 
-(def shift (r/atom 0))
-(def rot (anim/spring shift))
 
-(defn timeout [ms]
-  (let [c (chan)]
-    (js/setTimeout (fn [] (close! c)) ms)
-    c))
- 
-(defn loop-go
+
+(defn switch-page
   []
-  (go
-    (<! (timeout 3000))
-    (println (str "tick" @shift))
-    (swap! shift #(condp = %
-                     0 1
-                     1 0))
-    ;(loop-go)
-    ))
-(loop-go)
+  (swap! offset #(condp = %
+                   0 200
+                   200 0)))
 
 (defn draw
   ([time form w h center dotsdata]
+   (let [os @ospring]
     (.clearRect (.-ctx space) 0 0 w h)
     #_(doall (map 
            #(draw/draw-text form (js/Point. 200 (get % 3)) (get % 0) 25)
@@ -99,14 +125,15 @@
                 form 
                 [(/ w 2) (/ h 2)] 
                 [(- w 100) (get % 3)] 
-                center
-                @rot)
+                (.. center (add os 0))
+                @rot
+                %)
              dotsdata))
-    (.requestAnimationFrame js/window #(draw % form)))
+    (.requestAnimationFrame js/window #(draw % form))))
   ([time form]
    (let [h (:h @dim)
          w (:w @dim)]
-    (draw time form w h (.. (js/Vector. 0 (/ h 2)) (add 1 1)) ;add moouse parallax
+    (draw time form w h (.. (js/Vector. (/ w 2) (/ h 2)) (add 1 1)) ;add moouse parallax
                        (dots-from-data data)))))
 
 (draw 0 (js/Form. space))
