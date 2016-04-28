@@ -65,12 +65,17 @@
 
 (def springs (get-springs @data))
 
-(defn draw-element
-  [form]
-  (let []
-    (do 
-      (doall (map #(draw-text form (js/Point. (+ 200 @(get % :x)) (+ 200 @(get % :y)))  (get-in @data [(get % :no) :data 0]) 12) springs))
-      #_(swap! me #(+ % 200) ))))
+
+;#_(defn draw-element
+  ;[form el])
+  ;(let []
+      ;(doall 
+        ;(map #_(draw-text 
+                ;form 
+                ;(js/Point. (+ 200 @(get % :x)) (+ 200 @(get % :y)))  
+                ;(get-in @data [(get % :no) :data 0]) 
+                ;12) 
+             ;springs)))
 
 (defn switch-page
   []
@@ -110,6 +115,13 @@
         [evt]
         (println (str "ende" (:target evt)))))))
 
+(defn get-initial-coordinates
+  [datac]
+  (let [w (:w @dim)
+        h (:h @dim)
+        data @datac]
+        (map-indexed #(update-in %2 [:pos :y] + (* (+ 0.5 %1) (/ h (count data)))) data)))
+
 (defn setup
   []
   (do
@@ -117,6 +129,7 @@
     (if-not (by-id "ext-canvas-container")
     (do
       (add-image-listeners)
+      (get-initial-coordinates data)
       (append! (sel "body") (str
                               (html [:div#ext-canvas-container])
                               ;(html [:img#ext-image.ext-image.ext-canvas-slide {:src "img/t.png"}])))
@@ -133,12 +146,6 @@
   (swap! dim #(assoc % :w (.. js/window -innerWidth) :h (.. js/window -innerHeight)))
   (recur))
 
-(defn dots-from-data
-  [datac]
-  (let [w (:w @dim)
-        h (:h @dim)
-        data @datac]
-        (map-indexed #(update-in %2 [:pos :y] + (* (+ 0.5 %1) (/ h (count data)))) data)))
 
 (defn sc-overview
   [os form hostnameDict]
@@ -158,6 +165,10 @@
             os)
            dotsdata)))
 
+(defn get-elements
+  [spr]
+  (doall (map #(assoc {} :x @(get % :x)
+                         :y @(get % :y)) spr)))
 
 (defn draw
   ([time form w h center dotsdata]
@@ -165,7 +176,7 @@
          osf @offset]
     (.clearRect (.-ctx space) 0 0 w h)
 
-    (draw-element form)
+    ;(draw-element form)
     (sc-overview os form dotsdata)
     (sc-satellites os osf form center h w dotsdata)
 
@@ -173,7 +184,6 @@
   ([time form]
    (let [h (:h @dim)
          w (:w @dim)]
-    (draw time form w h (.. (js/Vector. (/ w 2) (/ h 2)) (add 1 1)) ;add moouse parallax
-                       (dots-from-data data)))))
+    (draw time form w h (.. (js/Vector. (/ w 2) (/ h 2)) (add 1 1)) (get-elements springs)))))
 
 (draw 0 (js/Form. space))
