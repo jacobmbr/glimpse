@@ -17,52 +17,65 @@
 (devtools/install! [:sanity-hints :custom-formatters])
 (def log #(.log js/console %))
 
-(def data [["domain8", 1, true] 
-           ["domain8", 1, true] 
-           ["domain1", 3, true] 
-           ["facebook", 3, true] 
-           ["domain1", 3, true] 
-           ["domain1", 3, true] 
-           ["domain1", 3, true] 
-           ["domain1", 15, true] 
-           ["myspace", 15, true] 
-           ["domain1", 15, true] 
-           ["domain1", 3, true] 
-           ["domain1", 3, true] 
-           ["domain1", 3, true] 
-           ["domain1", 7, true] 
-           ["domain1", 7, true] 
-           ["domain1", 7, true] 
-           ["domain1", 3, true] 
-           ["domain2", 6, true]])
+(def app-db (r/atom {:screen {:w 0 :h 0}
+                     :data [["domain8", 1, true]
+                           ["domain8", 1, true]
+                           ["domain1", 3, true]
+                           ["facebook", 3, true]
+                           ["domain1", 3, true]
+                           ["domain1", 3, true]
+                           ["domain1", 3, true]
+                           ["domain1", 15, true]
+                           ["myspace", 15, true]
+                           ["domain1", 15, true]
+                           ["domain1", 3, true]
+                           ["domain1", 3, true]
+                           ["domain1", 3, true]
+                           ["domain1", 7, true]
+                           ["domain1", 7, true]
+                           ["domain1", 7, true]
+                           ["domain1", 3, true]
+                           ["domain2", 6, true]]
+                     :offset 0
+                     :shift 0
+                     :current-page 1}))
+(def dim (r/cursor app-db [:screen]))
+(def data (r/cursor app-db [:data]))
+(def shift (r/cursor app-db [:shift]))
+(def offset (r/cursor app-db [:offset]))
 
-(defonce resize-chan (chan))
-(defonce dim (r/atom {:w 0 :h 0}))
 
-(def shift (r/atom 0))
 (def rot (anim/spring shift))
-
-(def offset (r/atom 0))
 (def ospring (anim/spring offset))
 
-(def state-chan (chan)) 
+(defonce resize-chan (chan))
+(def state-chan (chan))
+
+(defn switch-page
+  []
+  (let [h (/ (:h @dim) 1)]
+  (swap! offset #(condp = %
+                   0 h
+                   h 0))))
 
 (defn switch-state
   [chan]
   (go-loop []
-    (<! chan)
-    (println "hu")
-    (swap! shift #(condp = %
-                     0 1
-                     1 -1
-                     -1 0))
-    (recur)))
+     (let [msg (<! chan)]
+       (do (condp = msg
+             "page" (swap! shift #(condp = %
+                               0 1
+                               1 -1
+                               -1 0))
+             "hu" (switch-page))
+           (recur)))))
 (switch-state state-chan)
 
 (defn add-image-listeners []
   (do
     (.. js/window (addEventListener "resize" (fn [e] (go (>! resize-chan "hu")))))
     (.. js/window (addEventListener "mousedown" (fn [e] (go (>! state-chan "hu")))))
+    (.. js/window (addEventListener "keydown" (fn [e] (go (>! state-chan "page")))))
     (evt/listen!
     js/body
     :mousemove
@@ -98,37 +111,41 @@
   (recur))
 
 (defn dots-from-data
-  [data]
+  [datac]
   (let [w (:w @dim)
-        h (:h @dim)]
-  (reduce 
+        h (:h @dim)
+        data @datac]
+  (reduce
     #(conj %1 (conj %2 (* (+ 0.5 (count %1)) (/ h (count data)))))
     [] data)))
 
+(defn sc-overview
+  [os form hostnameDict]
+  (doall (map
+         #(draw/draw-text form (js/Point. 200 (+ os (get % 3))) (get % 0) 25)
+         hostnameDict)))
 
-
-(defn switch-page
-  []
-  (swap! offset #(condp = %
-                   0 200
-                   200 0)))
+(defn sc-satellites
+  [os osf form center h w dotsdata]
+  (doall (map #(draw-entity
+            form
+            [(/ w 2) (/ h 2)]
+            [(- w 100) (+ osf (get % 3))]
+            (.. center (add 0 os))
+            @rot
+            %
+            os)
+           dotsdata)))
 
 (defn draw
   ([time form w h center dotsdata]
-   (let [os @ospring]
+   (let [os @ospring
+         osf @offset]
     (.clearRect (.-ctx space) 0 0 w h)
-    #_(doall (map 
-           #(draw/draw-text form (js/Point. 200 (get % 3)) (get % 0) 25)
-           dotsdata))
-    (doall (map 
-             #(draw-entity 
-                form 
-                [(/ w 2) (/ h 2)] 
-                [(- w 100) (get % 3)] 
-                (.. center (add os 0))
-                @rot
-                %)
-             dotsdata))
+
+    (sc-overview os form dotsdata)
+    (sc-satellites os osf form center h w dotsdata)
+
     (.requestAnimationFrame js/window #(draw % form))))
   ([time form]
    (let [h (:h @dim)
