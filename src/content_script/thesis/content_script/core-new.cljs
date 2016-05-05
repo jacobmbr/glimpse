@@ -1,23 +1,20 @@
 ;; create the main project namespace
-(ns thesis.core
+(ns thesis.content-script.core-new
   (:require-macros [hiccups.core :as hiccups :refer [html]]
                    [cljs.core.async.macros :as m :refer [go go-loop]])
   (:require [domina.core :refer [by-id value set-value! append! by-class]]
             [domina.css :refer [sel]]
-            [thesis.draw :as draw :refer [draw-entity draw-text]]
+            [thesis.content-script.draw :as draw :refer [draw-entity draw-text]]
             [domina.events :as evt]
             [devtools.core :as devtools]
             [reagent.core :as r]
             [goog.events :as events]
-            [cljs-idxdb.core :as idx]
+            ;[cljs-idxdb.core :as idx]
             [goog.events.EventType :as EventType]
             [cljs.core.async :refer [chan close! <! >!]]
-            [thesis.animation :as anim]
+            [thesis.content-script.animation :as anim]
             [hiccups.runtime :as hiccupsrt]))
 
-;; enable cljs to print to the JS console of the browser
-(enable-console-print!)
-(devtools/install! [:sanity-hints :custom-formatters])
 (def log #(.log js/console %))
 
 (def app-db (r/atom {:screen {:w 0 :h 0}
@@ -44,6 +41,7 @@
                      :shift 0
                      :view "start"
                      :normalize-size 1
+                     :space nil
                      :current-page 1}))
 (def dim (r/cursor app-db [:screen]))
 (def data (r/cursor app-db [:data]))
@@ -53,6 +51,7 @@
 (def normalize (r/cursor app-db [:normalize]))
 (def center-point-x (r/cursor app-db [:center-point :x]))
 (def center-point-y (r/cursor app-db [:center-point :y]))
+(def space (r/cursor app-db [:space]))
 
 (def reactions (map-indexed #(anim/spring (r/cursor app-db [:data %1 :pos :x])) @data))
 
@@ -151,7 +150,7 @@
                                                                    "KeyR" "randomize"
                                                                    (str "default"))))))
     (evt/listen!
-    js/body
+    js/document
     :mousemove
     (fn [e]
       #_(println (str "node: " (:clientY e)))))
@@ -169,16 +168,6 @@
         data @datac]
         (map-indexed #(update-in %2 [:pos :y] + (* (+ 0.5 %1) (/ h (count data)))) data)))
 
-(def db (atom nil))
-(defonce store-name "requests")
-
-(defn setup-storage
-  []
-  (idx/create-db "example" 1
-                  #(-> (idx/delete-and-create-store % store-name {:keyPath "name"})
-                       (idx/create-index "ageIndex" "age" {:unique false}))
-                  #(reset! db %)))
-
 (defn setup
   []
   (do
@@ -187,22 +176,14 @@
       (add-image-listeners)
       (get-initial-coordinates data)
       (randomize-data)
-      (setup-storage)
 
       (reset! center-point-x 0)
       (reset! center-point-y (/ (:h @dim) 2))
-      (append! (sel "body") (str
-      (if-not (by-id "ext-canvas-container")
-                              (html [:div#ext-canvas-container])
-                              ;(html [:img#ext-image.ext-image.ext-canvas-slide {:src "img/t.png"}])))
-                              ))))))
+      (append! (sel "body") (str (if-not (by-id "ext-canvas-container")
+                                    (html [:div#ext-canvas-container])
+                                    ;(html [:img#ext-image.ext-image.ext-canvas-slide {:src "img/t.png"}])))
+                                    ))))))
 
-(setup)
-
-(defonce space (..
-             (js/CanvasSpace.)
-             (display "#ext-canvas-container")
-             (refresh true)))
 (go-loop []
   (<! resize-chan)
   (swap! dim #(assoc % :w (.. js/window -innerWidth) :h (.. js/window -innerHeight)))
@@ -274,4 +255,14 @@
          w (:w @dim)]
     (draw time form w h (.. (js/Vector. @center-spring-x @center-spring-y) (add 1 @offset)) (get-elements springs)))))
 
-(draw 0 (js/Form. space))
+(defn init! 
+  []
+  (do 
+    (log "huhu")
+    (setup)
+    (swap! space (..
+                 (js/CanvasSpace.)
+                 (display "#ext-canvas-container")
+                 (refresh true)))
+    (draw 0 (js/Form. space))))
+

@@ -1,4 +1,4 @@
-(ns thesis.draw)
+(ns thesis.content-script.draw)
 
 (defn draw-circle
   [form p size col]

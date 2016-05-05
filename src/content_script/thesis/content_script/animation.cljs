@@ -1,4 +1,4 @@
-(ns thesis.animation
+(ns thesis.content-script.animation
   "An animation library for Reagent (ClojureScript).
   There is only one concept:
   A reaction that moves toward some target,
