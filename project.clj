@@ -19,6 +19,7 @@
             [lein-environ "1.0.2"]
             [lein-cooper "1.2.2"]]
 
+  :prep-tasks ["javac" "compile" "shell" "echo" "huhu"]
   :source-paths ["src/background"
                  "src/content_script"
                  "src/dev"
@@ -52,20 +53,22 @@
                                            :optimizations :none
                                            :source-map    true}}
                            :content-script
-                           {:source-paths ["src/dev"
-                                           "src/content_script"]
+                           {:source-paths ["src/content_script" "src/dev"]
+                            :notify-command ["./scripts/concat-content.sh"]
                             :compiler     {:output-to     "resources/unpacked/compiled/content_script/thesis.js"
                                            :output-dir    "resources/unpacked/compiled/content_script"
                                            :asset-path    "compiled/content_script"
-                                           :optimizations :whitespace                                                         ; content scripts cannot do eval / load script dynamically
+                                           :main "thesis.content-script"
+                                           :optimizations :none                                                         ; content scripts cannot do eval / load script dynamically
                                            ;:optimizations :none                                                         ; content scripts cannot do eval / load script dynamically
                                            :verbose true
                                            :parallel-build true
                                            :closure-output-charset "US-ASCII"
-                                           :pretty-print  true
-                                           ;:source-map true}}}}}
+                                           ;:pretty-print false
+                                           ;:cache-analysis true
+                                           :source-map true}}}}}
                                            ; TODO This was initially along with optimizations :whitespace !
-                                           :source-map    "resources/unpacked/compiled/content_script/thesis.js.map"}}}}}
+                                           ;:source-map    "resources/unpacked/compiled/content_script/thesis.js.map"}}}}}
              :checkouts
              ; DON'T FORGET TO UPDATE scripts/ensure-checkouts.sh
              {:cljsbuild {:builds

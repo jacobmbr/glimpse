@@ -25,6 +25,7 @@
         "<all_urls>"
       ],
       "js": [
+        "cs_override.js",
         "compiled/content_script/thesis.js",
         "content-script.js"
       ],
