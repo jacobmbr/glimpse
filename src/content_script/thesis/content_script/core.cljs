@@ -1,9 +1,14 @@
 (ns thesis.content-script.core
-  (:require-macros [cljs.core.async.macros :refer [go-loop]])
-  (:require [cljs.core.async :refer [<!]]
-            [chromex.logging :refer-macros [log info warn error group group-end]]
+  (:require-macros [cljs.core.async.macros :refer [go-loop go]]
+                   [hiccups.core :as hiccups :refer [html]])
+  (:require [thesis.content-script.draw :as draw :refer [draw-entity draw-text]]
+            [devtools.core :as devtools]
+            [thesis.dev]
+            [cljs.core.async :refer [chan close! <! >!]]
+            [chromex.logging :refer-macros [log]]
             [chromex.protocols :refer [post-message!]]
-            [chromex.ext.runtime :as runtime :refer-macros [connect]]))
+            [chromex.ext.runtime :as runtime :refer-macros [connect]]
+            [thesis.content-script.canvas :as tc]))
 
 ; -- a message loop ---------------------------------------------------------------------------------------------------------
 
@@ -20,22 +25,14 @@
 
 ; -- a simple page analysis  ------------------------------------------------------------------------------------------------
 
-(defn do-page-analysis! [background-port]
-  (let [script-elements (.getElementsByTagName js/document "script")
-        script-count (.-length script-elements)
-        title (.-title js/document)
-        msg (str "CONTENT SCRIPT: document '" title "' contains " script-count " script tags.")]
-    (log msg)
-    (post-message! background-port msg)))
-
 (defn connect-to-background-page! []
   (let [background-port (runtime/connect)]
-    (post-message! background-port "hello from CONTENT SCRIPT!")
-    (run-message-loop! background-port)
-    (do-page-analysis! background-port)))
+    ;(post-message! background-port "hello from CONTENT SCRIPT!")
+    (run-message-loop! background-port)))
 
 ; -- main entry point -------------------------------------------------------------------------------------------------------
 
 (defn init! []
   (log "CONTENT SCRIPT: init")
-  (connect-to-background-page!))
+  (connect-to-background-page!)
+  (tc/setup))

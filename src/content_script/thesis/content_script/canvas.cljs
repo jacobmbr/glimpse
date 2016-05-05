@@ -1,5 +1,5 @@
 ;; create the main project namespace
-(ns thesis.content-script.core-new
+(ns thesis.content-script.canvas
   (:require-macros [hiccups.core :as hiccups :refer [html]]
                    [cljs.core.async.macros :as m :refer [go go-loop]])
   (:require [domina.core :refer [by-id value set-value! append! by-class]]
@@ -171,12 +171,13 @@
   (do
     (swap! dim #(assoc % :w (.. js/window -innerWidth) :h (.. js/window -innerHeight)))
     (do
-      (add-image-listeners)
+      ;(add-image-listeners)
       (get-initial-coordinates data)
       (randomize-data)
 
       (reset! center-point-x 0)
       (reset! center-point-y (/ (:h @dim) 2))
+      ;(log (str (clj->js (sel "body"))))
       (append! (sel "body") (str (if-not (by-id "ext-canvas-container")
                                     (html [:div#ext-canvas-container])
                                     ;(html [:img#ext-image.ext-image.ext-canvas-slide {:src "img/t.png"}])))
@@ -263,4 +264,5 @@
                  (display "#ext-canvas-container")
                  (refresh true)))
     (draw 0 (js/Form. space))))
+
 
