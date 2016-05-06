@@ -1,7 +1,7 @@
 (ns thesis.background.storage
   (:import goog.Uri)
   (:require-macros [cljs.core.async.macros :refer [go go-loop]])
-  (:require [cljs.core.async :refer [<! chan]]
+  (:require [cljs.core.async :refer [<! chan sub]]
             [clojure.string :refer [split-lines split join]]
             [clojure.set :refer [subset?]]
             [chromex.logging :refer-macros [log info warn error group group-end]]
@@ -19,38 +19,45 @@
 
 (defn setup-storage!
   []
-  (idx/create-db "requestsDB1" 1
-                  #(-> (idx/delete-and-create-store % store-name {:keyPath "timestamp"})
-                       (idx/create-index "hostnameIndex" "hostname" {:unique false}))
-                  #(reset! db %)))
+  (idx/create-db "requestsDB" 1
+                  #(let [store (idx/delete-and-create-store % store-name {:keyPath "timestamp"})]
+                       (idx/create-index store "hostnameIndex" "hostname" {:unique false})
+                       (idx/create-index store "domainIndex" "domain" {:unique false})
+                       (idx/create-index store "timestampIndex" "timestamp" {:unique false}))
+                  #(reset! db %)))  
 
 (defn get-domain
   [host]
   (let [host-array (split host ".")
         l (count host-array)]
-    (loop [i 0]
-      (if (contains? @psldb (join "." (subvec host-array i l)))
-          (log (join "." (subvec host-array (- i 1) l)))
-          (if (< i l) (recur (+ i 1)))))
-      ))
-  ;(log (contains? @psldb "ad"))))
+    (loop [i l]
+      (if (contains? @psldb (join "." (take-last i host-array)))
+          (join "." (take-last (+ i 1) host-array))
+          (if (> i 0) (recur (- i 1)))))))
 
-(defn process-request!
-  [r]
-  (let [ts (.-timeStamp r)
-        host (.. (Uri. (.-url r)) (getDomain))
-        domain (get-domain host)] 
-    ))
+(defn unique-in-n-minutes?
+  [n]
+)
 
 (defn store-request!
-  [r]
+  [r domain loc]
   (idx/add-item @db store-name
                 {:hostname (.-url r)
+                 :domain domain
+                 :location (str (.-lat loc) "|" (.-lon loc) "|" (.-acc loc))
                  :timestamp (.-timeStamp r)}
-                #(log "added")))
+                ))
 
 (defn get-and-store-psl!
   []
   (GET "assets/publicSuffixList.dat" {:handler (fn [e] 
                                                  (log (str "Logged list of " (count (split-lines e)) " public suffixes"))
                                                  (reset! psldb (set (split-lines e))))}))
+
+(defn process-request!
+  [r loc]
+  (let [ts (.-timeStamp r)
+        host (.. (Uri. (.-url r)) (getDomain))
+        domain (get-domain host)] 
+    (store-request! r domain loc)))
+
