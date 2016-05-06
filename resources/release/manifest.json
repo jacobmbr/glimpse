@@ -30,7 +30,10 @@
     "persistent": false
   },
   "permissions": [
-    "storage"
+    "storage",
+    "webRequest",
+    "<all_urls>",
+    "geolocation"
   ],
   "manifest_version": 2
 }
