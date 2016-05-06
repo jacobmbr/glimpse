@@ -8,6 +8,7 @@
                  [org.clojars.magomimmo/domina "2.0.0-SNAPSHOT"]
                  [cljs-idxdb "0.1.0"]
                  [hiccups "0.3.0"]
+                 [cljs-ajax "0.5.4"]
                  [reagent "0.6.0-alpha"]
                  [binaryage/devtools "0.6.1"]
                  [timothypratley/reanimated "0.1.4"]

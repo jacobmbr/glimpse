@@ -9,7 +9,7 @@
             [chromex.ext.tabs :as tabs]
             [chromex.ext.runtime :as runtime]
             [chromex.ext.web-request :as web-request]
-            [thesis.background.storage :refer [store-request! setup-storage!]]))
+            [thesis.background.storage :refer [process-request! setup-storage! get-and-store-psl!]]))
 
 (def clients (atom []))
 
@@ -51,7 +51,7 @@
   (let [[event-id event-args] event]
     ;(log (gstring/format "BACKGROUND: got chrome event (%05d)" event-num) event)
     (case event-id
-      ::web-request/on-before-request (-> event-args (first) (store-request!))
+      ::web-request/on-before-request (-> event-args (first) (process-request!))
       ;::runtime/on-connect (apply handle-client-connection! event-args)
       ;::tabs/on-created (tell-clients-about-new-tab!)
       nil)))
@@ -66,8 +66,8 @@
 
 (defn boot-chrome-event-loop! []
   (let [chrome-event-channel (make-chrome-event-channel (chan))]
-    (tabs/tap-all-events chrome-event-channel)
-    (runtime/tap-all-events chrome-event-channel)
+    ;(tabs/tap-all-events chrome-event-channel)
+    ;(runtime/tap-all-events chrome-event-channel)
     (web-request/tap-on-before-request-events chrome-event-channel (clj->js {:urls ["http://*/*", "https://*/*"]}))
     (run-chrome-event-loop! chrome-event-channel)))
 
@@ -76,4 +76,5 @@
 (defn init! []
   (log "BACKGROUND: init")
   (setup-storage!)
+  (get-and-store-psl!)
   (boot-chrome-event-loop!))

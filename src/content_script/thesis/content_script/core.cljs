@@ -35,4 +35,4 @@
 (defn init! []
   (log "CONTENT SCRIPT: init")
   (connect-to-background-page!)
-  (tc/setup))
+  (tc/init!))
