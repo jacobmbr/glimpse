@@ -12,7 +12,7 @@
             [chromex.ext.web-request :as web-request]
             [chromex.ext.browser-action :as browser-action]
             [chromex.ext.storage :as storage]
-            [thesis.background.storage :refer [process-request! setup-storage! get-and-store-psl! get-domain-count]]
+            [thesis.background.storage :as t-storage :refer [process-request! setup-storage! get-and-store-psl! get-domain-count]]
             [thesis.background.location :as location]))
 
 (enable-console-print!)
@@ -23,10 +23,12 @@
 
 (defn add-client! [client]
   ;(log "BACKGROUND: client connected" (get-sender client))
+  (t-storage/tabdict-add-client (.. (get-sender client) -tab -id))
   (swap! clients conj client))
 
 (defn remove-client! [client]
   ;(log "BACKGROUND: client disconnected" (get-sender client))
+  (t-storage/tabdict-remove-client (.. (get-sender client) -tab -id))
   (let [remove-item (fn [coll item] (remove #(identical? item %) coll))]
     (swap! clients remove-item client)))
 
@@ -55,7 +57,7 @@
     (if (= id (.. (get-sender client) -tab -id))
       (.. js/chrome -tabs (captureVisibleTab
                             #js {"quality" 50}
-                            #(post-message! client (clj->js {:id id :img %})))))))
+                            #(post-message! client (clj->js {:id id :img % :tabdict (t-storage/get-tabdict id)})))))))
 
 ; -- main event loop --------------------------------------------------------------------------------------------------------
 

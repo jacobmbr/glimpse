@@ -17,7 +17,7 @@
         renderer (THREE.CSS3DRenderer.)
         div (.. js/document (createElement "div"))
         object (THREE.CSS3DObject. div)
-        chan (chan)]
+        mychan (chan)]
 
     (set! (.-z (.-position camera)) 3000)
     (set! (.-backgroundImage (.-style div)) (str "url(" img ")"))
@@ -38,9 +38,9 @@
     (.. scene (add object))
     (append! (sel "body") (.-domElement renderer))
 
-    (go (loop [i 0]
-          (js/requestAnimationFrame #(go (.render renderer scene camera)
-                                          (set! (.-y (.-rotation object)) (/ i 100))
-                                          (set! (.-y (.-position object)) (/ i 10))
-                                         (>! chan (+ i 1))))
-          (recur (<! chan))))))
+    (go-loop [{:keys [x y rx ry]} {:x 0 :y 0 :rx 0 :ry 0}]
+          (set! (.-y (.-rotation object)) ry)
+          (set! (.-y (.-position object)) y)
+          (.render renderer scene camera)
+          (recur (<! mychan)))
+  mychan))

@@ -61,6 +61,9 @@
 (defonce resize-chan (chan))
 (defonce scroll-chan (chan))
 (def state-chan (chan))
+(def img-chan (atom nil))
+(def img-state (r/atom {:x 0 :y 0 :rx 0 :ry 0}))
+(def img-spring (anim/spring img-state))
 
 (defn randomize-data
   []
@@ -97,18 +100,6 @@
   [] data))
 
 (def springs (get-springs @data))
-
-
-;#_(defn draw-element
-  ;[form el])
-  ;(let []
-      ;(doall
-        ;(map #_(draw-text
-                ;form
-                ;(js/Point. (+ 200 @(get % :x)) (+ 200 @(get % :y)))
-                ;(get-in @data [(get % :no) :data 0])
-                ;12)
-             ;springs)))
 
 (defn switch-page
   []
@@ -166,6 +157,20 @@
         data @datac]
         (map-indexed #(update-in %2 [:pos :y] + (* (+ 0.5 %1) (/ h (count data)))) data)))
 
+(defn watch-resize! []
+  (go-loop []
+    (<! resize-chan)
+    (swap! dim #(assoc % :w (.. js/window -innerWidth) :h (.. js/window -innerHeight)))
+    (recur)))
+
+(defn watch-scroll! []
+  (go-loop
+    []
+    (let [dy (.-deltaY (<! scroll-chan))]
+      (println dy)
+      (swap! offset #(+ @offset dy))
+      (recur))))
+
 (defn setup
   []
   (do
@@ -174,6 +179,8 @@
       ;(add-image-listeners)
       (get-initial-coordinates data)
       (randomize-data)
+      (watch-scroll!)
+      (watch-resize!)
 
       (reset! center-point-x 0)
       (reset! center-point-y (/ (:h @dim) 2))
@@ -183,17 +190,6 @@
                                     ;(html [:img#ext-image.ext-image.ext-canvas-slide {:src "img/t.png"}])))
                                     ))))))
 
-(go-loop []
-  (<! resize-chan)
-  (swap! dim #(assoc % :w (.. js/window -innerWidth) :h (.. js/window -innerHeight)))
-  (recur))
-
-(go-loop
-  []
-  (let [dy (.-deltaY (<! scroll-chan))]
-    (println dy)
-    (swap! offset #(+ @offset dy))
-    (recur)))
 
 (defn sc-overview
   [form data]
@@ -249,14 +245,17 @@
     ;(sc-overview form (offspringify data))
     ;(sc-overview form (offspringify data))
 
-    (.requestAnimationFrame js/window #(draw % form))))
+    (.requestAnimationFrame js/window #(go
+                                         (>! @img-chan {})
+                                         (draw % form)))))
   ([time form]
    (let [h (:h @dim)
          w (:w @dim)]
     (draw time form w h (.. (js/Vector. @center-spring-x @center-spring-y) (add 1 @offset)) (get-elements springs)))))
 
 (defn init!
-  [img]
+  [img ichan]
+  (reset! img-chan ichan)
   (let [div (by-id "ext-canvas-container")]
     (if (nil? div)
       (do

@@ -12,6 +12,17 @@
 
 (def db (atom nil))
 (def psldb (atom nil))
+(def tabdict (atom nil))
+
+(defn tabdict-remove-client [client]
+  (log (str @tabdict))
+  (swap! tabdict dissoc client))
+
+(defn tabdict-add-client [client]
+  (swap! tabdict assoc client #{}))
+
+(defn get-tabdict [id]
+  (get-in @tabdict [id]))
 
 (def location (atom nil))
 
@@ -60,7 +71,9 @@
   [r loc]
   (let [ts (.-timeStamp r)
         host (.. (Uri. (.-url r)) (getDomain))
-        domain (get-domain host)]
+        domain (get-domain host)
+        tab-id (.-tabId r)]
+    (if-not (= tab-id -1) (swap! tabdict update-in [tab-id] conj domain))
     (store-request! r domain loc)))
 
 (defn get-domain-count [domain]

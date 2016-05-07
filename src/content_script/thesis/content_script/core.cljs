@@ -17,8 +17,8 @@
   (let [img (.-img msg)]
     (if (.-id msg)
       (do 
-        (tc/init! img)
-        (image/init! img))
+        (log (.-tabdict msg))
+        (tc/init! img (image/init! img) (.-tabdict msg)))
       (do (log (str "CONTENT SCRIPT: got message:")) (log msg)))))
 
 (defn run-message-loop! [message-channel]
