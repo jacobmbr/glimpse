@@ -13,7 +13,9 @@
 ; -- a message loop ---------------------------------------------------------------------------------------------------------
 
 (defn process-message! [message]
-  (log "CONTENT SCRIPT: got message:" message))
+  (if (= message "launch")
+    (tc/init!)
+    (log "CONTENT SCRIPT: got message:" message)))
 
 (defn run-message-loop! [message-channel]
   (log "CONTENT SCRIPT: starting message loop...")
@@ -27,12 +29,11 @@
 
 (defn connect-to-background-page! []
   (let [background-port (runtime/connect)]
-    ;(post-message! background-port "hello from CONTENT SCRIPT!")
+    (post-message! background-port "hello from CONTENT SCRIPT!")
     (run-message-loop! background-port)))
 
 ; -- main entry point -------------------------------------------------------------------------------------------------------
 
 (defn init! []
   (log "CONTENT SCRIPT: init")
-  (connect-to-background-page!)
-  (tc/init!))
+  (connect-to-background-page!))

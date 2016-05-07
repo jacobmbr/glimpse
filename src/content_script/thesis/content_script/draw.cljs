@@ -8,15 +8,15 @@
         ;(stroke "rgba(255,255,255,1)" 0)
         (fill col)
         (circle c))
-    (loop [x 8] 
+    (loop [x 8]
       (if (> x 0)
-        (do 
-          (.. form 
-              (circle 
-                (.. (js/Circle. (.. p 
+        (do
+          (.. form
+              (circle
+                (.. (js/Circle. (.. p
                                     ($add 0)
-                                    (rotate2D 
-                                      (/ x (.-PI js/Math)) 
+                                    (rotate2D
+                                      (/ x (.-PI js/Math))
                                       p)))
                                     (setRadius (* 3 3))))))
           (recur (dec x))))))
@@ -29,9 +29,9 @@
 
 (defn draw-text
   [form p t size]
-  (.. form (fill "white") (font (* 5 size) "Fira Sans, sans-serif") (text 
-                                                    p 
-                                                    (str t) 
+  (.. form (fill "white") (font (* 5 size) "Fira Sans, sans-serif") (text
+                                                    p
+                                                    (str t)
                                                     1000 size size)))
 
 (defn draw-entity
@@ -44,7 +44,7 @@
         good (get-in data [:data 2])
         col (if good "rgba(255,0,0,0.4)" "rgba(0,255,0,0.4)")
         pair (.to (js/Pair. center) tp)]
-  (do 
+  (do
     (draw-line form pair center col)
     (draw-circle form tp size col)
     (draw-text form tp (get-in data [:data 0]) size))))

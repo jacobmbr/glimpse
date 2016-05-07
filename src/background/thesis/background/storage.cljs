@@ -44,14 +44,16 @@
   (idx/add-item @db store-name
                 {:hostname (.-url r)
                  :domain domain
-                 :location (str (.-lat loc) "|" (.-lon loc) "|" (.-acc loc))
+                 :location (if (nil? loc)
+                             (str "")
+                             (str (.-lat loc) "|" (.-lon loc) "|" (.-acc loc)))
                  :timestamp (.-timeStamp r)}
-                ))
+                #()))
 
 (defn get-and-store-psl!
   []
   (GET "assets/publicSuffixList.dat" {:handler (fn [e] 
-                                                 (log (str "Logged list of " (count (split-lines e)) " public suffixes"))
+                                                 ;(log (str "Logged list of " (count (split-lines e)) " public suffixes"))
                                                  (reset! psldb (set (split-lines e))))}))
 
 (defn process-request!

@@ -4,7 +4,7 @@
                    [cljs.core.async.macros :as m :refer [go go-loop]])
   (:require [domina.core :refer [by-id value set-value! append! by-class]]
             [domina.css :refer [sel]]
-            [thesis.content-script.draw :as draw :refer [draw-entity draw-text]]
+            [thesis.content-script.draw :refer [draw-entity draw-text]]
             [domina.events :as evt]
             [reagent.core :as r]
             [goog.events :as events]
@@ -15,7 +15,7 @@
 
 (def log #(.log js/console %))
 
-(def app-db (r/atom {:screen {:w 0 :h 0}
+(defonce app-db (r/atom {:screen {:w 0 :h 0}
                      :data [{:pos {:x 0 :y 10} :display-size 5 :data ["outbrain.com", 1, true]}
                            {:pos {:x 19 :y 10} :display-size 5 :data ["disqus.com", 1, true]}
                            {:pos {:x 49 :y 10} :display-size 5 :data ["typekit.com", 3, false]}
@@ -236,7 +236,8 @@
 (defn draw
   ([time form w h center data]
    (let [os @ospring
-         osf @offset]
+         osf @offset
+         space @space]
     (.clearRect (.-ctx space) 0 0 w h)
 
     ;(draw-element form)
@@ -254,15 +255,13 @@
          w (:w @dim)]
     (draw time form w h (.. (js/Vector. @center-spring-x @center-spring-y) (add 1 @offset)) (get-elements springs)))))
 
-(defn init! 
+(defn init!
   []
   (do 
-    (log "huiui")
     (setup)
-    (swap! space (..
+    (reset! space (..
                  (js/CanvasSpace.)
                  (display "#ext-canvas-container")
                  (refresh true)))
-    (draw 0 (js/Form. space))))
-
+    (draw 0 (js/Form. @space))))
 
