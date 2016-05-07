@@ -4,6 +4,7 @@
                    [cljs.core.async.macros :as m :refer [go go-loop]])
   (:require [domina.core :refer [by-id value set-value! destroy! append! by-class]]
             [domina.css :refer [sel]]
+            [chromex.logging :refer-macros [log]]
             [thesis.content-script.draw :refer [draw-entity draw-text]]
             [domina.events :as evt]
             [reagent.core :as r]
@@ -11,9 +12,8 @@
             [goog.events.EventType :as EventType]
             [cljs.core.async :refer [chan close! <! >!]]
             [thesis.content-script.animation :as anim]
+            [thesis.content-script.image :as image]
             [hiccups.runtime :as hiccupsrt]))
-
-(def log #(.log js/console %))
 
 (defonce app-db (r/atom {:screen {:w 0 :h 0}
                      :data [{:pos {:x 0 :y 10} :display-size 5 :data ["outbrain.com", 1, true]}
@@ -245,18 +245,19 @@
     ;(sc-overview form (offspringify data))
     ;(sc-overview form (offspringify data))
 
-    (.requestAnimationFrame js/window #(go
-                                         (>! @img-chan {})
-                                         (draw % form)))))
+    (.requestAnimationFrame js/window #(do 
+                                         (draw % form)
+                                         (image/draw! {:x (rand 10) :y 0 :z 0 :rx 0 :ry 0 :rz 0 :display true})))))
   ([time form]
    (let [h (:h @dim)
          w (:w @dim)]
     (draw time form w h (.. (js/Vector. @center-spring-x @center-spring-y) (add 1 @offset)) (get-elements springs)))))
 
 (defn init!
-  [img ichan]
-  (reset! img-chan ichan)
-  (let [div (by-id "ext-canvas-container")]
+  [img tabdict]
+  (let [div (by-id "ext-canvas-container")
+        ichan (image/init! img)]
+    (reset! img-chan ichan)
     (if (nil? div)
       (do
         (setup)
@@ -265,7 +266,7 @@
                      (display "#ext-canvas-container")
                      (refresh true)))
         (draw 0 (js/Form. @space)))
+        
       (do (destroy! div)
           (destroy! (by-id "ext-image"))))))
-
 

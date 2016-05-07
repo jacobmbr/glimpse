@@ -7,6 +7,25 @@
             [domina.core :refer [by-id value set-value! destroy! append! by-class add-class!]]))
 
 (def THREE js/THREE)
+(def ascene (atom nil))
+(def arenderer (atom nil))
+(def aobject (atom nil))
+(def adiv (atom nil))
+(def acamera (atom nil))
+
+(defn draw! [{:keys [x y z rx ry rz display]}]
+          (if-not display
+            (set! (.-display (.-style @adiv)) "none")
+            (do 
+              (set! (.-display (.-style @adiv)) "block")
+              (set! (.-x (.-rotation @aobject)) rx)
+              (set! (.-y (.-rotation @aobject)) ry)
+              (set! (.-z (.-rotation @aobject)) rz)
+
+              (set! (.-x (.-position @aobject)) x)
+              (set! (.-y (.-position @aobject)) y)
+              (set! (.-z (.-position @aobject)) z)))
+          (.render @arenderer @ascene @acamera))
 
 (defn init!
   [img]
@@ -36,11 +55,13 @@
     (add-class! (.-domElement renderer) "renderer")
     (set! (.-position (.-style (.-domElement renderer))) "absolute")
     (.. scene (add object))
+    (reset! ascene scene)
+    (reset! aobject object)
+    (reset! arenderer renderer)
+    (reset! acamera camera)
+    (reset! adiv div)
     (append! (sel "body") (.-domElement renderer))
-
-    (go-loop [{:keys [x y rx ry]} {:x 0 :y 0 :rx 0 :ry 0}]
-          (set! (.-y (.-rotation object)) ry)
-          (set! (.-y (.-position object)) y)
-          (.render renderer scene camera)
-          (recur (<! mychan)))
+    (draw! {:x 0 :y 0 :z 0 :rx 0 :ry 0 :rz 0 :display false})
   mychan))
+
+
