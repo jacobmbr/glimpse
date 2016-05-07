@@ -2,7 +2,7 @@
 (ns thesis.content-script.canvas
   (:require-macros [hiccups.core :as hiccups :refer [html]]
                    [cljs.core.async.macros :as m :refer [go go-loop]])
-  (:require [domina.core :refer [by-id value set-value! append! by-class]]
+  (:require [domina.core :refer [by-id value set-value! destroy! append! by-class]]
             [domina.css :refer [sel]]
             [thesis.content-script.draw :refer [draw-entity draw-text]]
             [domina.events :as evt]
@@ -256,12 +256,17 @@
     (draw time form w h (.. (js/Vector. @center-spring-x @center-spring-y) (add 1 @offset)) (get-elements springs)))))
 
 (defn init!
-  []
-  (do 
-    (setup)
-    (reset! space (..
-                 (js/CanvasSpace.)
-                 (display "#ext-canvas-container")
-                 (refresh true)))
-    (draw 0 (js/Form. @space))))
+  [img]
+  (let [div (by-id "ext-canvas-container")]
+    (if (nil? div)
+      (do
+        (setup)
+        (reset! space (..
+                     (js/CanvasSpace.)
+                     (display "#ext-canvas-container")
+                     (refresh true)))
+        (draw 0 (js/Form. @space)))
+      (do (destroy! div)
+          (destroy! (by-id "ext-image"))))))
+
 

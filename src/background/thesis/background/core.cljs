@@ -12,7 +12,7 @@
             [chromex.ext.web-request :as web-request]
             [chromex.ext.browser-action :as browser-action]
             [chromex.ext.storage :as storage]
-            [thesis.background.storage :refer [process-request! setup-storage! get-and-store-psl!]]
+            [thesis.background.storage :refer [process-request! setup-storage! get-and-store-psl! get-domain-count]]
             [thesis.background.location :as location]))
 
 (enable-console-print!)
@@ -22,11 +22,11 @@
 ; -- clients manipulation ---------------------------------------------------------------------------------------------------
 
 (defn add-client! [client]
-  (log "BACKGROUND: client connected" (get-sender client))
+  ;(log "BACKGROUND: client connected" (get-sender client))
   (swap! clients conj client))
 
 (defn remove-client! [client]
-  (log "BACKGROUND: client disconnected" (get-sender client))
+  ;(log "BACKGROUND: client disconnected" (get-sender client))
   (let [remove-item (fn [coll item] (remove #(identical? item %) coll))]
     (swap! clients remove-item client)))
 
@@ -35,7 +35,7 @@
 (defn run-client-message-loop! [client]
   (go-loop []
     (when-let [message (<! client)]
-      (log "BACKGROUND: got client message:" message "from tab: " (.. (get-sender client) -tab -id))
+      ;(log "BACKGROUND: got client message:" message "from tab: " (.. (get-sender client) -tab -id))
       (recur))
     (remove-client! client)))
 
@@ -51,9 +51,11 @@
     (post-message! client "a new tab was created")))
 
 (defn tell-client-about-click! [id]
-  (post-message!
-    (first (filter #(= (.. (get-sender %) -tab -id) id) @clients))
-    "launch"))
+  (doseq [client @clients]
+    (if (= id (.. (get-sender client) -tab -id))
+      (.. js/chrome -tabs (captureVisibleTab
+                            #js {"quality" 50}
+                            #(post-message! client (clj->js {:id id :img %})))))))
 
 ; -- main event loop --------------------------------------------------------------------------------------------------------
 
@@ -61,9 +63,12 @@
   (let [[event-id event-args] event]
     ;(log (gstring/format "BACKGROUND: got chrome event (%05d)" event-num) (str event-id))
     (case event-id
-      ::browser-action/on-clicked (tell-client-about-click! (oget (first event-args) "id"))
+      ::browser-action/on-clicked (do
+                                    (get-domain-count "zeit.de")
+                                    (tell-client-about-click! (oget (first event-args) "id")))
       ::storage/on-changed (.. js/chrome -storage -local (get #(reset! location %)))
-      ::web-request/on-before-request (-> event-args (first) (process-request! @location))
+      ::web-request/on-before-request (let [req (first event-args)]
+                                        (process-request! req @location))
       ::runtime/on-connect (apply handle-client-connection! event-args)
       ::tabs/on-created (tell-clients-about-new-tab!)
       nil)))

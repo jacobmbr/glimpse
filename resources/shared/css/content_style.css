@@ -51,7 +51,7 @@
   position:absolute;
   top: 0px;
   left: 0px;
-  z-index: 1000000;
+  z-index:1000000092 !important;
 }
 #top-space {
   width: 100%;
@@ -125,13 +125,6 @@
   opacity: 0;
   transition: all 0.5s ease-out;
 }
-.ext-canvas-slide {
-  animation-duration: 0.7s;
-  animation-fill-mode: both;
-  animation-direction: alternate;
-  animation-iteration-count: 2;
-}
-
 @keyframes ext-canvas-slide  {
   to {
     transform: scale3d(.2, .3, .3) translate3d(-2000px, 160px, 0) perspective(1000px) rotate3d(0, 1, 0, 20deg);
@@ -142,6 +135,10 @@
 .ext-canvas-slide {
   -webkit-animation-name: ext-canvas-slide;
   animation-name: ext-canvas-slide;
+  animation-duration: 0.7s;
+  animation-fill-mode: both;
+  animation-direction: alternate;
+  animation-iteration-count: 2;
 }
 .typed-cursor{
     background-color:transparent !important;

@@ -24,7 +24,7 @@
                        (idx/create-index store "hostnameIndex" "hostname" {:unique false})
                        (idx/create-index store "domainIndex" "domain" {:unique false})
                        (idx/create-index store "timestampIndex" "timestamp" {:unique false}))
-                  #(reset! db %)))  
+                  #(reset! db %)))
 
 (defn get-domain
   [host]
@@ -52,7 +52,7 @@
 
 (defn get-and-store-psl!
   []
-  (GET "assets/publicSuffixList.dat" {:handler (fn [e] 
+  (GET "assets/publicSuffixList.dat" {:handler (fn [e]
                                                  ;(log (str "Logged list of " (count (split-lines e)) " public suffixes"))
                                                  (reset! psldb (set (split-lines e))))}))
 
@@ -60,6 +60,8 @@
   [r loc]
   (let [ts (.-timeStamp r)
         host (.. (Uri. (.-url r)) (getDomain))
-        domain (get-domain host)] 
+        domain (get-domain host)]
     (store-request! r domain loc)))
 
+(defn get-domain-count [domain]
+  (idx/get-by-index @db store-name "domainIndex" domain #(log (count %))))

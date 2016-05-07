@@ -1,3 +1,10 @@
+.renderer {
+  position: fixed; 
+  top: 0px;
+  left: 0px;
+  background: transparent;
+  z-index: 1000000092 !important;
+}
 .textmarker {
   display:inline;
   background-size: 200% auto;
@@ -51,7 +58,7 @@
   position:absolute;
   top: 0px;
   left: 0px;
-  z-index: 1000000;
+  z-index: 1000000092 !important;
 }
 #top-space {
   width: 100%;

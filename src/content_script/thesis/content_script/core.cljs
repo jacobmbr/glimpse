@@ -8,14 +8,18 @@
             [chromex.logging :refer-macros [log]]
             [chromex.protocols :refer [post-message!]]
             [chromex.ext.runtime :as runtime :refer-macros [connect]]
-            [thesis.content-script.canvas :as tc]))
+            [thesis.content-script.canvas :as tc]
+            [thesis.content-script.image :as image]))
 
 ; -- a message loop ---------------------------------------------------------------------------------------------------------
 
-(defn process-message! [message]
-  (if (= message "launch")
-    (tc/init!)
-    (log "CONTENT SCRIPT: got message:" message)))
+(defn process-message! [msg]
+  (let [img (.-img msg)]
+    (if (.-id msg)
+      (do 
+        (tc/init! img)
+        (image/init! img))
+      (do (log (str "CONTENT SCRIPT: got message:")) (log msg)))))
 
 (defn run-message-loop! [message-channel]
   (log "CONTENT SCRIPT: starting message loop...")
