@@ -17,23 +17,7 @@
 
 (defonce app-db (r/atom {:screen {:w 0 :h 0}
                      :data [{:pos {:x 0 :y 10} :display-size 5 :data ["outbrain.com", 1, true]}
-                           {:pos {:x 19 :y 10} :display-size 5 :data ["disqus.com", 1, true]}
-                           {:pos {:x 49 :y 10} :display-size 5 :data ["typekit.com", 3, false]}
-                           {:pos {:x 19 :y 30} :display-size 5 :data ["facebook", 3, false]}
-                           {:pos {:x 19 :y 10} :display-size 5 :data ["yldbt.com", 3, false]}
-                           {:pos {:x 19 :y 50} :display-size 5 :data ["demdex.net", 3, false]}
-                           {:pos {:x 19 :y 10} :display-size 5 :data ["scorecardresearch.net", 3, false]}
-                           {:pos {:x 19 :y 50} :display-size 15 :data ["googletagservices.net", 15, false]}
-                           {:pos {:x 19 :y 10} :display-size 15 :data ["polarmobile.com", 15, false]}
-                           {:pos {:x 19 :y 30} :display-size 15 :data ["optimizely.com", 15, false]}
-                           {:pos {:x 19 :y 20} :display-size 3 :data ["mediavoice.com", 3, true]}
-                           {:pos {:x 19 :y 10} :display-size 3 :data ["omtrdc.net", 3, true]}
-                           {:pos {:x 19 :y 10} :display-size 3 :data ["zqkt.net", 3, true]}
-                           {:pos {:x 19 :y 40} :display-size 8 :data ["amazon-adsystem.com", 7, true]}
-                           {:pos {:x 19 :y 30} :display-size 8 :data ["cloudfront.net", 7, true]}
-                           {:pos {:x 19 :y 20} :display-size 7 :data ["domain1", 7, true]}
-                           {:pos {:x 19 :y 10} :display-size 2 :data ["domain1", 3, true]}
-                           {:pos {:x 19 :y 10} :display-size 3 :data ["domain2", 6, true]}]
+                           {:pos {:x 19 :y 10} :display-size 5 :data ["disqus.com", 1, true]}]
                      :offset 0
                      :center-point {:x 0 :y 0}
                      :shift 0
