@@ -1,0 +1,16 @@
+h1.ext-h1 {
+  color: white;
+  font-family: "Source Code Pro" !important;
+  font-weight: 300;
+  font-size: 14px;
+}
+#ext-canvas-container {
+  height: 100%;
+  width: 100%;
+  position: fixed;
+  left: 0;
+  top: 0;
+  background-color: #051e2e;
+  z-index:1000000091 !important;
+  transition: all 0.5s ease-in-out;
+}

@@ -8,7 +8,8 @@
             [chromex.logging :refer-macros [log]]
             [chromex.protocols :refer [post-message!]]
             [chromex.ext.runtime :as runtime :refer-macros [connect]]
-            [thesis.content-script.canvas :as tc]))
+            [thesis.content-script.canvas :as tc]
+            [thesis.content-script.gui :as gui]))
 
 ; -- a message loop ---------------------------------------------------------------------------------------------------------
 
@@ -17,7 +18,7 @@
         tabdict (.-tabdict msg)]
     (if (.-id msg)
       (do 
-        (tc/init! img tabdict))
+        (gui/init! img tabdict))
       (do (log (str "CONTENT SCRIPT: got message:")) (log msg)))))
 
 (defn run-message-loop! [message-channel]

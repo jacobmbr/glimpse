@@ -32,7 +32,7 @@
         "compiled/content_script/thesis.js",
         "content-script.js"
       ],
-      "css": ["css/content_style.css"],
+      "css": ["css/content_styles_dom.css"],
       "run_at": "document_start"
     }
   ],
