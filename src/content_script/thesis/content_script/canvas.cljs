@@ -60,6 +60,9 @@
 
 (defonce resize-chan (chan))
 (defonce scroll-chan (chan))
+
+(def tabdict (atom nil))
+
 (def state-chan (chan))
 (def img-chan (atom nil))
 (def img-state (r/atom {:x 0 :y 0 :rx 0 :ry 0}))
@@ -201,6 +204,16 @@
             25)
          data)))
 
+(defn sc-tabdict
+  [form center]
+  (doall (map-indexed
+           #(draw-text
+              form
+              (js/Vector. 20 (+ 20 (* 70 %1)))
+              %2
+              15)
+           @tabdict)))
+
 (defn sc-satellites
   [form center data osf]
   (doall (map #(draw-entity
@@ -209,6 +222,7 @@
             %
             osf)
            data)))
+
 (defn sc-clusters
   [form center data]
   (reduce #() [] data)
@@ -238,35 +252,43 @@
 
     ;(draw-element form)
     (condp = @view
-      "start" (sc-satellites form center data osf)
+      "start" (do
+                (sc-satellites form center data osf))
       ;"random" (sc-satellites form center data)
       ;"single" (sc-satellites form center data)
       )
     ;(sc-overview form (offspringify data))
     ;(sc-overview form (offspringify data))
 
-    (.requestAnimationFrame js/window #(do 
+    (.requestAnimationFrame js/window #(do
                                          (draw % form)
-                                         (image/draw! {:x (rand 10) :y 0 :z 0 :rx 0 :ry 0 :rz 0 :display true})))))
+                                         (image/draw! {:x 0 :y 0 :z (- 0 (/ time 100)) :rx 0 :ry (+ 0 (/ time 100000)) :rz 0 :display false})))))
   ([time form]
    (let [h (:h @dim)
          w (:w @dim)]
     (draw time form w h (.. (js/Vector. @center-spring-x @center-spring-y) (add 1 @offset)) (get-elements springs)))))
 
 (defn init!
-  [img tabdict]
+  [img tab-dict]
   (let [div (by-id "ext-canvas-container")
         ichan (image/init! img)]
+    (reset! tabdict tab-dict)
     (reset! img-chan ichan)
     (if (nil? div)
       (do
+        (->> (doall (map #(hash-map
+                             :pos {:x (+ 1 (rand 20)) :y (+ 1 (rand 50))}
+                             :display-size (+ 5 (rand 15))
+                             :data [%, 4, false]
+                             ) (vec tab-dict)))
+        (reset! data))
         (setup)
+      {:pos {:x 19 :y 10} :display-size 5 :data ["yldbt.com", 3, false]}
         (reset! space (..
                      (js/CanvasSpace.)
                      (display "#ext-canvas-container")
                      (refresh true)))
         (draw 0 (js/Form. @space)))
-        
       (do (destroy! div)
           (destroy! (by-id "ext-image"))))))
 

@@ -16,7 +16,7 @@
 (defn draw! [{:keys [x y z rx ry rz display]}]
           (if-not display
             (set! (.-display (.-style @adiv)) "none")
-            (do 
+            (do
               (set! (.-display (.-style @adiv)) "block")
               (set! (.-x (.-rotation @aobject)) rx)
               (set! (.-y (.-rotation @aobject)) ry)
@@ -31,14 +31,16 @@
   [img]
   (let [w (.-innerWidth js/window)
         h (.-innerHeight js/window)
-        camera (THREE.PerspectiveCamera. 40 (/ w h) 1 10000)
+        camera (THREE.PerspectiveCamera.
+                 (* (* 2 (.atan js/Math (/ h 2000))) (/ 180 (.-PI js/Math)))
+                 (/ w h) 1 100)
         scene (THREE.Scene.)
         renderer (THREE.CSS3DRenderer.)
         div (.. js/document (createElement "div"))
         object (THREE.CSS3DObject. div)
         mychan (chan)]
 
-    (set! (.-z (.-position camera)) 3000)
+    (set! (.-z (.-position camera)) 1000)
     (set! (.-backgroundImage (.-style div)) (str "url(" img ")"))
     (set! (.-width (.-style div)) (str w "px"))
     (set! (.-height (.-style div)) (str h "px"))
