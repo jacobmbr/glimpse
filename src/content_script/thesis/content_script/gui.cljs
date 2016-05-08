@@ -4,12 +4,17 @@
   (:require [reagent.core :as r]
             [thesis.content-script.animation :as anim]
             [chromex.logging :refer-macros [log]]
+            [domina.events :as evt]
             [domina.core :refer [by-id value set-value! destroy! append! by-class]]))
 
 (def img-data (r/atom nil))
 (def data (r/atom nil))
 (def dim (r/atom [0 0]))
 (def mouse (r/atom [0 0]))
+(def mouseX (reaction (first @mouse)))
+(def mouseY (reaction (peek @mouse)))
+
+
 
 (defn satellite [el]
   (let [text (get @el :text)
@@ -22,16 +27,18 @@
         fssp (anim/interpolate-to fs)]
     (r/create-class
       {:component-will-unmount
-       #(log "gone")
+       #()
        :display-name "satellite"
        :reagent-render
         (fn [el]
           [:div
            [:h1 {:class "ext-h1" 
-                 :style {:position "absolute" :left @xsp :top @ysp
+                 :style {:position "absolute" :left (+ 20 @mouseX) :top (+ @ysp @mouseY)
                          :font-size (str @fssp "px")
+                         :font-weight "bold"
                          :background-color "transparent"
-                         :transform (str "translate( @xsp px, @ysp px)")}} (str text)
+                         ;:transform (str "translate(" @xsp "px," @ysp "px)")
+                         }} (str text)
            (for [i (range dots)] ^{:key i} [:span i])]])})))
 
 (defn satellites []
@@ -68,18 +75,20 @@
         div (set! (.-id el) "ext-canvas-container")]
     (reset! img-data img)
     (->> (vec (map #(hash-map
-                         :x (int (rand 800))
-                         :y (int (rand 600))
+                         :x 0
+                         :y 0
                          :font-size (int (+ 10 (rand 5)))
                          :text %
                          :dots (rand 20)
                          ) (vec tabdict)))
     (reset! data))
     (reset! dim [(.-innerWidth js/window) (.-innerHeight js/window)])
+    (.. js/window (addEventListener "mousemove" #(swap! mouse assoc 0 (.-clientX %) 1 (.-clientY %))))
 
-    (js/setTimeout (fn [] (swap! data conj {:x 200 :font-size 10 :y 200 :text "huhu" :dots 25})) 3000)
-    (js/setTimeout (fn [] (swap! data (fn [e] (vec (map-indexed #(assoc %2 :x 400 :y (* 20 %1) :font-size (rand 20)) e))))) 4000)
-    (js/setTimeout (fn [] (swap! data (fn [e] (vec (remove #(> (get % :x) 500) e))))) 5000)
+    (js/setTimeout (fn [] (swap! data conj {:x 200 :font-size 10 :y 200 :text "huhu" :dots 25})) 2000)
+    (js/setTimeout (fn [] (swap! data (fn [e] (vec (map-indexed #(assoc %2 :x 400 :y (* 20 %1) ) e))))) 3000)
+    (js/setTimeout (fn [] (swap! data (fn [e] (vec (map #(update % :x + 200) e))))) 5000)
+    (js/setTimeout (fn [] (swap! data (fn [e] (vec (map #(update % :x + 200) e))))) 6000)
 
     (r/render [root] (by-id "ext-canvas-container"))))
 

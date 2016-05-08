@@ -44,7 +44,8 @@
     "storage",
     "webRequest",
     "<all_urls>",
-    "geolocation"
+    "geolocation",
+    "tabs"
   ],
   "manifest_version": 2
 }

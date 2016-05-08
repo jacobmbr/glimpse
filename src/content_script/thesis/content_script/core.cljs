@@ -9,17 +9,19 @@
             [chromex.protocols :refer [post-message!]]
             [chromex.ext.runtime :as runtime :refer-macros [connect]]
             [thesis.content-script.canvas :as tc]
+            [thesis.content-script.indicator :as indicator]
             [thesis.content-script.gui :as gui]))
 
 ; -- a message loop ---------------------------------------------------------------------------------------------------------
+(def background-chan (atom nil))
 
 (defn process-message! [msg]
-  (let [img (.-img msg)
-        tabdict (.-tabdict msg)]
-    (if (.-id msg)
-      (do 
-        (gui/init! img tabdict))
-      (do (log (str "CONTENT SCRIPT: got message:")) (log msg)))))
+  (condp = (.-type msg)
+    "init" (let [img (.-img msg)
+                 tabdict (.-tabdict msg)]
+             (gui/init! img tabdict))
+    "new-request" (indicator/add-domain (.-tabdict msg))
+    (log (str "No handler for msg: "  msg))))
 
 (defn run-message-loop! [message-channel]
   (log "CONTENT SCRIPT: starting message loop...")
@@ -29,15 +31,24 @@
       (recur))
     (log "CONTENT SCRIPT: leaving message loop")))
 
+(defn run-indicator-message-loop! [ind-chan]
+  (go-loop []
+    (when-let [msg (<! ind-chan)]
+      (log msg)
+      (post-message! @background-chan "ind-clicked!"))
+      (recur)))
+
 ; -- a simple page analysis  ------------------------------------------------------------------------------------------------
 
 (defn connect-to-background-page! []
   (let [background-port (runtime/connect)]
     (post-message! background-port "hello from CONTENT SCRIPT!")
+    (reset! background-chan background-port)
     (run-message-loop! background-port)))
 
 ; -- main entry point -------------------------------------------------------------------------------------------------------
 
 (defn init! []
   (log "CONTENT SCRIPT: init")
+  (.. js/window (addEventListener "DOMContentLoaded" #(run-indicator-message-loop! (indicator/init!))))
   (connect-to-background-page!))

@@ -37,6 +37,8 @@
 (defn run-client-message-loop! [client]
   (go-loop []
     (when-let [message (<! client)]
+      (log (str id))
+      (if (= "ind-clicked!" message) (tell-client-about-click! (.. (get-sender client) -tab -id)))
       ;(log "BACKGROUND: got client message:" message "from tab: " (.. (get-sender client) -tab -id))
       (recur))
     (remove-client! client)))
@@ -57,7 +59,12 @@
     (if (= id (.. (get-sender client) -tab -id))
       (.. js/chrome -tabs (captureVisibleTab
                             #js {"quality" 50}
-                            #(post-message! client (clj->js {:id id :img % :tabdict (t-storage/get-tabdict id)})))))))
+                            #(post-message! client (clj->js {:type "init" :id id :img % :tabdict (t-storage/get-tabdict id)})))))))
+
+(defn tell-client-about-request! [r]
+  (doseq [client @clients]
+    (if (= (.-tabId r) (.. (get-sender client) -tab -id))
+      (post-message! client (clj->js {:type "new-request" :tabdict (t-storage/get-tabdict (.-tabId r))})))))
 
 ; -- main event loop --------------------------------------------------------------------------------------------------------
 
@@ -70,6 +77,7 @@
                                     (tell-client-about-click! (oget (first event-args) "id")))
       ::storage/on-changed (.. js/chrome -storage -local (get #(reset! location %)))
       ::web-request/on-before-request (let [req (first event-args)]
+                                        (tell-client-about-request! req)
                                         (process-request! req @location))
       ::runtime/on-connect (apply handle-client-connection! event-args)
       ::tabs/on-created (tell-clients-about-new-tab!)
