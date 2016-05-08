@@ -15,7 +15,7 @@
 (def tabdict (atom nil))
 
 (defn tabdict-remove-client [client]
-  (log (str @tabdict))
+  ;(log (str @tabdict))
   (swap! tabdict dissoc client))
 
 (defn tabdict-add-client [client]
@@ -73,8 +73,10 @@
         host (.. (Uri. (.-url r)) (getDomain))
         domain (get-domain host)
         tab-id (.-tabId r)]
-    (if-not (= tab-id -1) (swap! tabdict update-in [tab-id] conj domain))
-    (store-request! r domain loc)))
+    (if-not (or (= tab-id -1) (contains? (get @tabdict tab-id) domain))
+      (do 
+       (swap! tabdict update-in [tab-id] conj domain)
+       (store-request! r domain loc)))))
 
 (defn get-domain-count [domain]
   (idx/get-by-index @db store-name "domainIndex" domain #(log (count %))))
