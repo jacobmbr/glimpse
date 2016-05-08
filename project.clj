@@ -25,6 +25,7 @@
                  "src/content_script"
                  "src/dev"
                  "src/figwheel"
+                 "src/map"
                  "src/popup"]
 
   :clean-targets ^{:protect false} ["target"
@@ -42,6 +43,15 @@
                             :compiler     {:output-to     "resources/unpacked/compiled/background/thesis.js"
                                            :output-dir    "resources/unpacked/compiled/background"
                                            :asset-path    "compiled/background"
+                                           :optimizations :none
+                                           :source-map    true}}
+                           :map
+                           {:source-paths ["src/dev"
+                                           "src/figwheel"
+                                           "src/map"]
+                            :compiler     {:output-to     "resources/unpacked/compiled/map/thesis.js"
+                                           :output-dir    "resources/unpacked/compiled/map"
+                                           :asset-path    "compiled/map"
                                            :optimizations :none
                                            :source-map    true}}
                            :popup
@@ -74,6 +84,8 @@
              ; DON'T FORGET TO UPDATE scripts/ensure-checkouts.sh
              {:cljsbuild {:builds
                           {:background     {:source-paths ["checkouts/chromex/src/lib"
+                                                           "checkouts/chromex/src/exts"]}
+                           :map            {:source-paths ["checkouts/chromex/src/lib"
                                                            "checkouts/chromex/src/exts"]}
                            :popup          {:source-paths ["checkouts/chromex/src/lib"
                                                            "checkouts/chromex/src/exts"]}
@@ -116,9 +128,9 @@
                                            :elide-asserts true}}}}}}
 
   :aliases {"dev-build" ["with-profile" "+unpacked,+checkouts"
-                         "cljsbuild" "once" "background" "popup" "content-script"]
+                         "cljsbuild" "once" "background" "popup" "map" "content-script"]
             "fig"       ["with-profile" "+unpacked,+figwheel,+checkouts"
-                         "figwheel" "background" "popup"]
+                         "figwheel" "background" "popup" "map"]
             "content"   ["with-profile" "+unpacked,+checkouts"
                          "cljsbuild" "auto" "content-script"]
             "devel"     ["with-profile" "+dev-mode" "do"                                                                      ; for mac only
@@ -126,5 +138,5 @@
                          "cooper"]
             "release"   ["with-profile" "+release"
                          "do" "clean,"
-                         "cljsbuild" "once" "background" "popup" "content-script"]
+                         "cljsbuild" "once" "background" "popup" "map" "content-script"]
             "package"   ["shell" "scripts/package.sh"]})

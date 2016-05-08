@@ -46,10 +46,6 @@
           (join "." (take-last (+ i 1) host-array))
           (if (> i 0) (recur (- i 1)))))))
 
-(defn unique-in-n-minutes?
-  [n]
-)
-
 (defn store-request!
   [r domain loc]
   (idx/add-item @db store-name

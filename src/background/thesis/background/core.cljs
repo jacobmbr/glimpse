@@ -18,6 +18,7 @@
 (enable-console-print!)
 (def clients (atom []))
 (def location (atom nil))
+(declare tell-client-about-click!)
 
 ; -- clients manipulation ---------------------------------------------------------------------------------------------------
 
@@ -37,8 +38,12 @@
 (defn run-client-message-loop! [client]
   (go-loop []
     (when-let [message (<! client)]
-      (log (str id))
-      (if (= "ind-clicked!" message) (tell-client-about-click! (.. (get-sender client) -tab -id)))
+      (let [tabId (.. (get-sender client) -tab -id)]
+        (condp = message
+          "ind-clicked!" (tell-client-about-click! tabId)
+          "get-counts" (log (str tabId " wants counts"))
+          (log message)))
+      ;(if (= "ind-clicked!" message) (tell-client-about-click! (.. (get-sender client) -tab -id)))
       ;(log "BACKGROUND: got client message:" message "from tab: " (.. (get-sender client) -tab -id))
       (recur))
     (remove-client! client)))
@@ -47,24 +52,25 @@
 
 (defn handle-client-connection! [client]
   (add-client! client)
-  (post-message! client "hello from BACKGROUND PAGE!")
+  (post-message! client "ACK")
   (run-client-message-loop! client))
 
 (defn tell-clients-about-new-tab! []
   (doseq [client @clients]
     (post-message! client "a new tab was created")))
 
-(defn tell-client-about-click! [id]
+(defn message-to-client [tabId msg]
   (doseq [client @clients]
-    (if (= id (.. (get-sender client) -tab -id))
-      (.. js/chrome -tabs (captureVisibleTab
-                            #js {"quality" 50}
-                            #(post-message! client (clj->js {:type "init" :id id :img % :tabdict (t-storage/get-tabdict id)})))))))
+    (if (= tabId (.. (get-sender client) -tab -id))
+      (post-message! client msg))))
+
+(defn tell-client-about-click! [id]
+  (.. js/chrome -tabs (captureVisibleTab
+                        #js {"quality" 50}
+                        #(message-to-client id (clj->js {:type "init" :id id :img % :tabdict (t-storage/get-tabdict id)})))))
 
 (defn tell-client-about-request! [r]
-  (doseq [client @clients]
-    (if (= (.-tabId r) (.. (get-sender client) -tab -id))
-      (post-message! client (clj->js {:type "new-request" :tabdict (t-storage/get-tabdict (.-tabId r))})))))
+  (message-to-client (.-tabId r) (clj->js {:type "new-request" :tabdict (t-storage/get-tabdict (.-tabId r))})))
 
 ; -- main event loop --------------------------------------------------------------------------------------------------------
 
