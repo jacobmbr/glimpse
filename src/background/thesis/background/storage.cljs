@@ -1,7 +1,7 @@
 (ns thesis.background.storage
   (:import goog.Uri)
   (:require-macros [cljs.core.async.macros :refer [go go-loop]])
-  (:require [cljs.core.async :refer [<! chan sub >!]]
+  (:require [cljs.core.async :refer [<! chan sub >! put!]]
             [clojure.string :refer [split-lines split join]]
             [clojure.set :refer [subset?]]
             [chromex.logging :refer-macros [log info warn error group group-end]]
@@ -80,15 +80,22 @@
 (defn get-domain-count [domain cb]
   (idx/get-by-index @db store-name "domainIndex" domain #(cb (clj->js {:type "count-res" :domain domain :count (count %)}))))
 
-(defn get-distinct-domains []
+(defn get-all-for-domain [res-chan domain]
   (let [req (.. (idx/get-tx-store @db store-name)
                 (index "domainIndex")
-                (openCursor null "nextunique"))
-        res-chan (chan)]
-    (go
+                (openCursor (.. js/IDBKeyRange (only domain)) "next"))]
       (set!
         (.-onsuccess req)
         (idx/make-rec-acc-fn [] req
-                             #(go (>! res-chan {:restype "distinct-domains"
+                             #(put! res-chan {:restype "all-for-domain"
+                                   :data %})))))
+
+(defn get-distinct-domains [res-chan]
+  (let [req (.. (idx/get-tx-store @db store-name)
+                (index "domainIndex")
+                (openCursor null "nextunique"))]
+      (set!
+        (.-onsuccess req)
+        (idx/make-rec-acc-fn [] req
+                             #(put! res-chan {:restype "distinct-domains"
                                    :data (doall (reduce (fn [p n] (conj p (get n :domain))) [] %))})))))
-    res-chan))

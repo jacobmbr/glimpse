@@ -37,15 +37,22 @@
 ; -- client event loop ------------------------------------------------------------------------------------------------------
 
 (defn run-client-message-loop! [client]
-  (go-loop []
-    (when-let [message (<! client)]
-      (let [tabId (.. (get-sender client) -tab -id)]
+  (let [res-chan (chan)
+        tabId (.. (get-sender client) -tab -id)]
+    (go (loop []
+      (when-let [message (<! client)]
+        (log (str "Tab " tabId ": " (.-reqtype message)))
         (condp = (.-reqtype message)
           "ind-clicked!" (tell-client-about-click! tabId)
-          "get-counts" (go (message-to-client tabId (clj->js (<! (t-storage/get-distinct-domains)))))
-          (log message)))
-      (recur))
-    (remove-client! client)))
+          "get-counts" (t-storage/get-distinct-domains res-chan)
+          "get-domain" (t-storage/get-all-for-domain res-chan (.-req message))
+          (log message))
+        (recur)))
+      (remove-client! client))
+      (go (loop []
+        (when-let [msg (<! res-chan)]
+          (message-to-client tabId (clj->js msg))
+          (recur))))))
 
 ; -- event handlers ---------------------------------------------------------------------------------------------------------
 

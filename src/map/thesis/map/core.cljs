@@ -9,11 +9,12 @@
 
 ; -- a message loop ---------------------------------------------------------------------------------------------------------
 (def gui-chan (atom nil))
+(def msg-to-gui (atom nil))
 (def background-channel (atom nil))
 
 (defn process-message! [message]
   (condp = message
-    "ACK" (gui/init! @gui-chan)
+    "ACK" (gui/init! @gui-chan @msg-to-gui)
     (log "map: got message:" message)))
 
 (defn run-message-loop! [message-channel]
@@ -29,7 +30,7 @@
     (when-let [{:keys [reqtype req]} (<! @gui-chan)]
       (condp = reqtype
         "get-counts" (post-message! @background-channel (clj->js {:reqtype "get-counts" :req req}))
-        (log (clj->js {:reqtype "get-counts" :req req}))
+        "get-domain" (post-message! @background-channel (clj->js {:reqtype "get-domain" :req req}))
         (log (str reqtype))))
     (recur)))
 
@@ -44,5 +45,6 @@
 (defn init! []
   (log "map: init")
   (reset! gui-chan (chan))
+  (reset! msg-to-gui (chan))
   (run-gui-loop!)
   (connect-to-background-page!))
