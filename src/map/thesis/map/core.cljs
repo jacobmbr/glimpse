@@ -26,10 +26,11 @@
 
 (defn run-gui-loop! []
   (go-loop []
-    (when-let [msg (<! @gui-chan)]
-      (if (= "get-counts" msg) 
-        (post-message! @background-channel "get-counts")
-        (log msg)))
+    (when-let [{:keys [reqtype req]} (<! @gui-chan)]
+      (condp = reqtype
+        "get-counts" (post-message! @background-channel (clj->js {:reqtype "get-counts" :req req}))
+        (log (clj->js {:reqtype "get-counts" :req req}))
+        (log (str reqtype))))
     (recur)))
 
 (defn connect-to-background-page! []

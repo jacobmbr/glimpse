@@ -35,7 +35,7 @@
   (go-loop []
     (when-let [msg (<! ind-chan)]
       (log msg)
-      (post-message! @background-chan "ind-clicked!"))
+      (post-message! @background-chan (cljs->js {:reqtype "ind-clicked!"})))
       (recur)))
 
 ; -- a simple page analysis  ------------------------------------------------------------------------------------------------

@@ -19,6 +19,7 @@
 (def clients (atom []))
 (def location (atom nil))
 (declare tell-client-about-click!)
+(declare message-to-client)
 
 ; -- clients manipulation ---------------------------------------------------------------------------------------------------
 
@@ -39,12 +40,10 @@
   (go-loop []
     (when-let [message (<! client)]
       (let [tabId (.. (get-sender client) -tab -id)]
-        (condp = message
+        (condp = (.-reqtype message)
           "ind-clicked!" (tell-client-about-click! tabId)
-          "get-counts" (log (str tabId " wants counts"))
+          "get-counts" (t-storage/get-domain-count "www.google.com" #(message-to-client tabId (clj->js %)))
           (log message)))
-      ;(if (= "ind-clicked!" message) (tell-client-about-click! (.. (get-sender client) -tab -id)))
-      ;(log "BACKGROUND: got client message:" message "from tab: " (.. (get-sender client) -tab -id))
       (recur))
     (remove-client! client)))
 
@@ -79,7 +78,6 @@
     ;(log (gstring/format "BACKGROUND: got chrome event (%05d)" event-num) (str event-id))
     (case event-id
       ::browser-action/on-clicked (do
-                                    (get-domain-count "zeit.de")
                                     (tell-client-about-click! (oget (first event-args) "id")))
       ::storage/on-changed (.. js/chrome -storage -local (get #(reset! location %)))
       ::web-request/on-before-request (let [req (first event-args)]

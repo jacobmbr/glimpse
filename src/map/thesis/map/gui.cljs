@@ -12,12 +12,12 @@
 (def core-chan (atom nil))
 (def counts (atom nil))
 
-(defn get-counts [] (go (>! @core-chan "get-counts")))
+(defn get-counts [] (go (>! @core-chan {:reqtype "get-counts" :req "www.google.com"})))
 
 (defn run-core-loop! []
   (go-loop []
     (when-let [msg (<! @core-chan)]
-      (log msg))
+      (log (str msg)))
     (recur)))
 
 (defn root []

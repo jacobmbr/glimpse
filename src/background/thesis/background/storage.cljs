@@ -74,5 +74,5 @@
        (swap! tabdict update-in [tab-id] conj domain)
        (store-request! r domain loc)))))
 
-(defn get-domain-count [domain]
-  (idx/get-by-index @db store-name "domainIndex" domain #(log (count %))))
+(defn get-domain-count [domain cb]
+  (idx/get-by-index @db store-name "domainIndex" domain #(cb (count %))))
