@@ -1,7 +1,7 @@
 (ns thesis.background.storage
   (:import goog.Uri)
   (:require-macros [cljs.core.async.macros :refer [go go-loop]])
-  (:require [cljs.core.async :refer [<! chan sub]]
+  (:require [cljs.core.async :refer [<! chan sub >!]]
             [clojure.string :refer [split-lines split join]]
             [clojure.set :refer [subset?]]
             [chromex.logging :refer-macros [log info warn error group group-end]]
@@ -73,15 +73,22 @@
         domain (get-domain host)
         tab-id (.-tabId r)]
     (if-not (or (= tab-id -1) (contains? (get @tabdict tab-id) domain))
-      (do 
+      (do
        (swap! tabdict update-in [tab-id] conj domain)
        (store-request! r domain loc)))))
 
 (defn get-domain-count [domain cb]
   (idx/get-by-index @db store-name "domainIndex" domain #(cb (clj->js {:type "count-res" :domain domain :count (count %)}))))
 
-(defn get-distinct-domains [cb]
-  (let [req (.. (idx/get-tx-store @db store-name) 
+(defn get-distinct-domains []
+  (let [req (.. (idx/get-tx-store @db store-name)
                 (index "domainIndex")
-                (openCursor null "nextunique"))]
-    (set! (.-onsuccess req) (idx/make-rec-acc-fn [] req #(log (str (first %)))))))
+                (openCursor null "nextunique"))
+        res-chan (chan)]
+    (go
+      (set!
+        (.-onsuccess req)
+        (idx/make-rec-acc-fn [] req
+                             #(go (>! res-chan {:restype "distinct-domains"
+                                   :data (doall (reduce (fn [p n] (conj p (get n :domain))) [] %))})))))
+    res-chan))
