@@ -32,11 +32,11 @@
     (log "CONTENT SCRIPT: leaving message loop")))
 
 (defn run-indicator-message-loop! [ind-chan]
-  (go-loop []
+  (go (loop []
     (when-let [msg (<! ind-chan)]
-      (log msg)
-      (post-message! @background-chan (cljs->js {:reqtype "ind-clicked!"})))
-      (recur)))
+      ;(log msg)
+      (post-message! @background-chan (clj->js {:reqtype "ind-clicked!"}))
+      (recur)))))
 
 ; -- a simple page analysis  ------------------------------------------------------------------------------------------------
 

@@ -2,7 +2,7 @@
   (:require-macros [cljs.core.async.macros :refer [go-loop]])
   (:require [cljs.core.async :refer [<!]]
             [thesis.map.gui :as gui]
-            [cljs.core.async :refer [<! chan]]
+            [cljs.core.async :refer [<! chan put!]]
             [chromex.logging :refer-macros [log info warn error group group-end]]
             [chromex.protocols :refer [post-message!]]
             [chromex.ext.runtime :as runtime :refer-macros [connect]]))
@@ -13,8 +13,11 @@
 (def background-channel (atom nil))
 
 (defn process-message! [message]
-  (condp = message
+  (condp = (.-restype message)
     "ACK" (gui/init! @gui-chan @msg-to-gui)
+    "distinct-domains" (put! @msg-to-gui message)
+    "distinct-locations" (put! @msg-to-gui message)
+    "all-for-domain" (put! @msg-to-gui message)
     (log "map: got message:" message)))
 
 (defn run-message-loop! [message-channel]
@@ -30,6 +33,7 @@
     (when-let [{:keys [reqtype req]} (<! @gui-chan)]
       (condp = reqtype
         "get-counts" (post-message! @background-channel (clj->js {:reqtype "get-counts" :req req}))
+        "get-locations" (post-message! @background-channel (clj->js {:reqtype "get-locations" :req req}))
         "get-domain" (post-message! @background-channel (clj->js {:reqtype "get-domain" :req req}))
         (log (str reqtype))))
     (recur)))

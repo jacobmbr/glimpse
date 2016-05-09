@@ -10,17 +10,19 @@
             [cljs-idxdb.core :as idx]
             [domina.core :refer [by-id value set-value! destroy! append! by-class]]))
 
+(def app-db (r/atom {}))
 (def call-chan (atom nil))
 (def response-chan (atom nil))
-(def counts (atom nil))
+(def counts (r/cursor @app-db [:counts]))
 
 (defn get-counts [] (put! @call-chan {:reqtype "get-counts"}))
 (defn get-domain [domain] (put! @call-chan {:reqtype "get-domain" :req domain}))
+(defn get-locations [] (put! @call-chan {:reqtype "get-locations"}))
 
 (defn listen! []
   (go-loop []
     (when-let [msg (<! @response-chan)]
-      (log (str msg)))
+      (log msg))
     (recur)))
 
 (defn root []
@@ -34,6 +36,7 @@
     (reset! response-chan response)
     (listen!)
     (get-counts)
-    (get-domain "www.google.com")
+    (get-locations)
+    (get-domain "google.com")
     (r/render [root] (by-id "ext-map-div"))))
 

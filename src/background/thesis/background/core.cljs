@@ -45,6 +45,7 @@
         (condp = (.-reqtype message)
           "ind-clicked!" (tell-client-about-click! tabId)
           "get-counts" (t-storage/get-distinct-domains res-chan)
+          "get-locations" (t-storage/get-distinct-locations res-chan)
           "get-domain" (t-storage/get-all-for-domain res-chan (.-req message))
           (log message))
         (recur)))
@@ -58,7 +59,7 @@
 
 (defn handle-client-connection! [client]
   (add-client! client)
-  (post-message! client "ACK")
+  (post-message! client #js {"restype" "ACK"})
   (run-client-message-loop! client))
 
 (defn tell-clients-about-new-tab! []

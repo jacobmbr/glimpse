@@ -32,10 +32,11 @@
 
 (defn setup-storage!
   []
-  (idx/create-db "requestsDB" 1
+  (idx/create-db "requestsDB" 2
                   #(let [store (idx/delete-and-create-store % store-name {:keyPath "timestamp"})]
                        (idx/create-index store "hostnameIndex" "hostname" {:unique false})
                        (idx/create-index store "domainIndex" "domain" {:unique false})
+                       (idx/create-index store "locationIndex" "location" {:unique false})
                        (idx/create-index store "timestampIndex" "timestamp" {:unique false}))
                   (fn [res]
                      (reset! db res))))
@@ -90,12 +91,25 @@
                              #(put! res-chan {:restype "all-for-domain"
                                    :data %})))))
 
-(defn get-distinct-domains [res-chan]
+(defn get-distinct-index [res-chan idx kw callback]
   (let [req (.. (idx/get-tx-store @db store-name)
-                (index "domainIndex")
+                (index idx)
                 (openCursor null "nextunique"))]
       (set!
         (.-onsuccess req)
-        (idx/make-rec-acc-fn [] req
-                             #(put! res-chan {:restype "distinct-domains"
-                                   :data (doall (reduce (fn [p n] (conj p (get n :domain))) [] %))})))))
+        (idx/make-rec-acc-fn [] req #(callback
+                                       (doall 
+                                         (reduce 
+                                           (fn [p n] (conj p (get n kw))) 
+                                           [] 
+                                           %)))))))
+
+(defn get-distinct-locations [res-chan]
+  (get-distinct-index res-chan "locationIndex" :location
+    #(put! res-chan {:restype "distinct-locations"
+                     :data %})))
+
+(defn get-distinct-domains [res-chan]
+  (get-distinct-index res-chan "domainIndex" :domain
+    #(put! res-chan {:restype "distinct-domains"
+                     :data %})))

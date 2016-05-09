@@ -4,7 +4,7 @@
                    [hiccups.core :as hiccups :refer [html]])
   (:require [domina.core :refer [by-id value set-value! destroy! append! by-class]]
             [chromex.logging :refer-macros [log]]
-            [cljs.core.async :refer [chan close! <! >!]]
+            [cljs.core.async :refer [chan close! <! >! put!]]
             [clojure.set :as s]
             [reagent.core :as r]
             [domina.css :refer [sel]]))
@@ -55,7 +55,7 @@
        :reagent-render
        (fn a-canvas [] 
          @domains
-          [:div {:on-click #(go (>! @ind-chan "clicked"))
+          [:div {:on-click #(put! @ind-chan "huhu")
                  :id "ext-canvas"}])})))
 
 (defn indicator-component []
