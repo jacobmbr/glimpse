@@ -14,6 +14,7 @@
 (def dexie (atom nil))
 (def psldb (atom nil))
 (def tabdict (atom nil))
+(declare null)
 
 (defn tabdict-remove-client [client]
   ;(log (str @tabdict))
@@ -36,9 +37,8 @@
                        (idx/create-index store "hostnameIndex" "hostname" {:unique false})
                        (idx/create-index store "domainIndex" "domain" {:unique false})
                        (idx/create-index store "timestampIndex" "timestamp" {:unique false}))
-                  (fn [res] 
-                     (reset! db res)
-                     (reset! dexie (js/Dexie. "requestsDB")))))
+                  (fn [res]
+                     (reset! db res))))
 
 (defn get-domain
   [host]
@@ -82,7 +82,6 @@
 
 (defn get-distinct-domains [cb]
   (let [req (.. (idx/get-tx-store @db store-name) 
-                (index "domainIndex") 
+                (index "domainIndex")
                 (openCursor null "nextunique"))]
     (set! (.-onsuccess req) (idx/make-rec-acc-fn [] req #(log (str (first %)))))))
-    
