@@ -11,6 +11,7 @@
             [cljs-idxdb.core :as idx]))
 
 (def db (atom nil))
+(def dexie (atom nil))
 (def psldb (atom nil))
 (def tabdict (atom nil))
 
@@ -35,7 +36,9 @@
                        (idx/create-index store "hostnameIndex" "hostname" {:unique false})
                        (idx/create-index store "domainIndex" "domain" {:unique false})
                        (idx/create-index store "timestampIndex" "timestamp" {:unique false}))
-                  #(reset! db %)))
+                  (fn [res] 
+                     (reset! db res)
+                     (reset! dexie (js/Dexie. "requestsDB")))))
 
 (defn get-domain
   [host]
@@ -75,4 +78,11 @@
        (store-request! r domain loc)))))
 
 (defn get-domain-count [domain cb]
-  (idx/get-by-index @db store-name "domainIndex" domain #(cb (count %))))
+  (idx/get-by-index @db store-name "domainIndex" domain #(cb (clj->js {:type "count-res" :domain domain :count (count %)}))))
+
+(defn get-distinct-domains [cb]
+  (let [req (.. (idx/get-tx-store @db store-name) 
+                (index "domainIndex") 
+                (openCursor null "nextunique"))]
+    (set! (.-onsuccess req) (idx/make-rec-acc-fn [] req #(log (str (first %)))))))
+    

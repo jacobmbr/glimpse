@@ -42,7 +42,7 @@
       (let [tabId (.. (get-sender client) -tab -id)]
         (condp = (.-reqtype message)
           "ind-clicked!" (tell-client-about-click! tabId)
-          "get-counts" (t-storage/get-domain-count "www.google.com" #(message-to-client tabId (clj->js %)))
+          "get-counts" (t-storage/get-distinct-domains #(message-to-client tabId (clj->js %)))
           (log message)))
       (recur))
     (remove-client! client)))
