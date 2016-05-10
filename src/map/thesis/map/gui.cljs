@@ -15,28 +15,61 @@
             [domina.core :refer [by-id value set-value! destroy! append! by-class]]))
 
 
+(defn display-history []
+  (let [history (subscribe [:history])]
+    (fn [this]
+      [:div {:style {:width "100%"
+                     :height "55%"
+                     :position "relative"
+                     :overflow-x "hide"
+                     :background-color "rgba(100,100,100, 0.5)"}}
+        [:div {:style {:width "inherit"
+                       ;:min-width "1000px"
+                       :overflow "auto"
+                       :border-bottom "1px solid white"
+                       :height "100%"
+                       :position "absolute"
+                       :left "0px"}}
+         (map-indexed #(do 
+                         ^{:key %2} [:div {:class "history-div"
+                                             :style {
+                                                :font-weight "200"
+                                                :font-size "10px"
+                                                :position "absolute"
+                                                :transform (str "translate(" (* 50 (+ 1 %1)) "px,100px) rotate(-35deg)")}} %2]) @history)]])))
+
 (defn display-locations []
   (let [locations (subscribe [:distinct-locations])
         loading? (subscribe [:loading-locations?])]
     (fn [] 
-      (if-not @loading? 
         [:div {:style {:position "absolute"
                        :top "100px"}} 
-         (for [x @locations] ^{:key x} [:span (map #(subs % 0 6) (take 2 (split x #"\|")))])]))))
+        (if-not @loading? (for [x @locations] ^{:key x} [:span (map #(subs % 0 6) (take 2 (split x #"\|")))]) [:h1 "loading"])])))
 
 (defn display-domains []
   (let [domains (subscribe [:distinct-domains])
         loading? (subscribe [:loading-domains?])]
     (fn [] 
-      (if-not @loading? 
-        [:div {:style {:z-index 100
-                       :position "absolute"
-                       :height "20%"
+        [:div {:style {:height "45%"
                        :width "100%"
-                       :overflow "hidden"
-                       :background "rgba(100,100,100,0.5)"}}
-         [:div (for [x @domains] ^{:key x} [:span x])]
-         ]))))
+                       ;:padding "20px"
+                       :overflow "scroll"
+                       :background "rgba(3, 201, 200,0.5)"}}
+         [:div {:style {:padding "10px 10px 0 30px"}}
+          [:h1 "Where you've been and who was there with you."]
+          (if-not @loading? [:div (for [x @domains] ^{:key x} [:span 
+                                                               [:a {:href "#"
+                                                                   :on-click #(dispatch [:get-domain-info x])
+                                                                   :style {:color "white" :font-size "15px"}} x] [:span " - "]])] [:p "loading"])]
+         ])))
+
+(defn infobox [domain]
+  (let [info (subscribe [:domain-info domain])
+        loading? (subscribe [:loading-domain-info?])]
+    (fn []
+      [:div
+       [:div {:style {:position "fixed" :left "0px" :bottom "0px" :background "rgba(100,100,100,0.3)"}}
+       (if-not @loading? [:span (str "info: " (for [x @info] [:p x]))] [:h1 "loading..."])]])))
 
 (defn mapbox []
   (let [mapb (r/atom nil)
@@ -66,7 +99,6 @@
                                 (if @geoloading?
                                   (do (recur))
                                   (do (log "adding now") 
-                                      (log @geojson)
                                       (.. @mapb (addSource "markers" #js {"type" "geojson"
                                                                           "data" @geojson}))
                                       ;(log (str @geojson))
@@ -77,9 +109,10 @@
                                                                          ;"text-field" "{title}"
                                                                          ;"text-size" 30}
                                                            "paint" #js {"circle-color" "white"
-                                                                        "circle-opacity" 0.1
+                                                                        "circle-opacity" 0.4
                                                                         "circle-radius" 40}
                                                            "source" "markers"}))
+                                      ;(log (.. @mapb (getLayer "markers")))
                                       ))))))
 
        :reagent-render
@@ -90,12 +123,20 @@
                              :top "0px"
                              :left "0px"
                              :height "100%"
-                             :width "100%"}}])})))
+                             :width "100%"}}
+          [:div {:style {:height "100%" :width "100%" :background-color "rgba(100,100,100,0)" :display "none"}}]])})))
 
 (defn root []
   [:div
-   [:h1 {:on-click #(dispatch [:get-counts])} "moinsen"]
-   [display-domains] [display-locations] [mapbox]])
+   [mapbox]
+   [infobox]
+   [:div {:style {:position "absolute"
+                  :top "0px"
+                  :left "0px"
+                  :width "100%"
+                  :height "35%"}} 
+    [display-history][display-domains]]
+   ])
 
 (defn init! [call response]
   (let [node (.. js/document (createElement "div"))
@@ -106,6 +147,8 @@
     (dispatch [:get-locations])
     (dispatch [:get-my-location])
     (dispatch [:get-location-counts])
+    (dispatch [:get-history])
+    (dispatch [:get-domain-info "adzerk.net"])
   	(r/render [root] (by-id "ext-map-div"))))
 
 

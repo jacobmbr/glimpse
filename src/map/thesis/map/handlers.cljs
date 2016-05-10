@@ -1,9 +1,11 @@
 (ns thesis.map.handlers
+  (:import goog.Uri)
   (:require-macros [cljs.core.async.macros :refer [go-loop go]])
   (:require [reagent.core :as r]
             [chromex.ext.storage :as storage]
             [cljs.core.async :refer [put!]]
             [chromex.logging :refer-macros [log]]
+            [thesis.background.storage :as st]
             [re-frame.core :refer [register-handler path trim-v after debug dispatch]]))
 
 (def call-chan (atom nil))
@@ -16,8 +18,41 @@
         "distinct-domains" (dispatch [:handle-counts (js->clj (.-data msg))])
         "distinct-locations" (dispatch [:handle-locations (js->clj (.-data msg))])
         "location-counts" (dispatch [:handle-location-counts (js->clj (.-data msg))])
+        "all-for-domain" (dispatch [:handle-domain-info (js->clj (.-data msg))])
         (log "unhandled: " msg))
     (recur))))
+
+(register-handler
+  :get-history
+  (fn [db _] 
+      (.. js/chrome -history (search #js {"text" ""
+                                          "startTime" (- (.now js/Date) (* 1000 60 60 24 7))
+                                          "maxResults" 1000} #(dispatch [:handle-history %])))
+    db))
+
+(register-handler
+  :handle-history
+  (fn [db [_ res]]
+    (let [test-set (r/atom (set []))]
+      (assoc db :history (reduce (fn [p n] 
+                (let [url (.. (Uri. (.-url n)) (getDomain))]
+                  (if (contains? @test-set url)
+                    p
+                    (do 
+                      (swap! test-set conj url)
+                      (conj p url))))) [] res)))))
+
+(register-handler
+  :get-domain-info
+  (fn [db [_ domain]] 
+    (put! @call-chan {:reqtype "all-for-domain" :req domain})
+    (assoc db :loading-domain-info? true)))
+
+(register-handler
+  :handle-domain-info
+  (fn [db [_ res]]
+    (assoc db :domain-info  res 
+                 :loading-domain-info? false)))
 
 (register-handler
   :get-my-location
@@ -28,7 +63,6 @@
 
 (register-handler
   :handle-location
-  debug
   (fn [db [_ res]]
     (let [loc (js->clj res :keywordize-keys true)]
       (if (nil? (:lat loc)) (dispatch [:get-my-location]))

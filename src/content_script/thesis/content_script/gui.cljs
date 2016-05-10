@@ -70,25 +70,25 @@
    [screenshot]])
 
 (defn init! [img tabdict]
-  (let [node (.. js/document (createElement "div"))
-        el (.. js/document -body (appendChild node))
-        div (set! (.-id el) "ext-canvas-container")]
-    (reset! img-data img)
-    (->> (vec (map #(hash-map
-                         :x 0
-                         :y 0
-                         :font-size (int (+ 10 (rand 5)))
-                         :text %
-                         :dots (rand 20)
-                         ) (vec tabdict)))
-    (reset! data))
-    (reset! dim [(.-innerWidth js/window) (.-innerHeight js/window)])
-    (.. js/window (addEventListener "mousemove" #(swap! mouse assoc 0 (.-clientX %) 1 (.-clientY %))))
+  (if-not (by-id "ext-canvas-container")
+    (let [node (.. js/document (createElement "div"))
+          el (.. js/document -body (appendChild node))
+          div (set! (.-id el) "ext-canvas-container")]
+      (reset! img-data img)
+      (->> (vec (map #(hash-map
+                           :x 0
+                           :y 0
+                           :font-size (int (+ 10 (rand 5)))
+                           :text %
+                           :dots (rand 20)
+                           ) (vec tabdict)))
+      (reset! data))
+      (reset! dim [(.-innerWidth js/window) (.-innerHeight js/window)])
+      (.. js/window (addEventListener "mousemove" #(swap! mouse assoc 0 (.-clientX %) 1 (.-clientY %))))
 
-    (js/setTimeout (fn [] (swap! data conj {:x 200 :font-size 10 :y 200 :text "huhu" :dots 25})) 2000)
-    (js/setTimeout (fn [] (swap! data (fn [e] (vec (map-indexed #(assoc %2 :x 400 :y (* 20 %1) ) e))))) 3000)
-    (js/setTimeout (fn [] (swap! data (fn [e] (vec (map #(update % :x + 200) e))))) 5000)
-    (js/setTimeout (fn [] (swap! data (fn [e] (vec (map #(update % :x + 200) e))))) 6000)
+      (js/setTimeout (fn [] (swap! data conj {:x 200 :font-size 10 :y 200 :text "huhu" :dots 25})) 2000)
+      (js/setTimeout (fn [] (swap! data (fn [e] (vec (map-indexed #(assoc %2 :x 400 :y (* 20 %1) ) e))))) 3000)
+      (js/setTimeout (fn [] (swap! data (fn [e] (vec (map #(update % :x + 200) e))))) 5000)
+      (js/setTimeout (fn [] (swap! data (fn [e] (vec (map #(update % :x + 200) e))))) 6000)
 
-    (r/render [root] (by-id "ext-canvas-container"))))
-
+      (r/render [root] (by-id "ext-canvas-container")))))

@@ -19,9 +19,10 @@
   (condp = (.-type msg)
     "init" (let [img (.-img msg)
                  tabdict (.-tabdict msg)]
+             (log "init!")
              (gui/init! img tabdict))
     "new-request" (indicator/add-domain (.-tabdict msg))
-    (log (str "No handler for msg: "  msg))))
+    (log msg)))
 
 (defn run-message-loop! [message-channel]
   (log "CONTENT SCRIPT: starting message loop...")

@@ -33,17 +33,17 @@
 
 (defn setup-storage!
   []
-  (idx/create-db "requestsDB" 2
+  (idx/create-db "requestsDB" 1
                   #(let [store (idx/delete-and-create-store % store-name {:keyPath "timestamp"})]
                        (idx/create-index store "hostnameIndex" "hostname" {:unique false})
                        (idx/create-index store "domainIndex" "domain" {:unique false})
                        (idx/create-index store "locationIndex" "location" {:unique false})
+                       (idx/create-index store "tabUrlIndex" "tabUrl" {:unique false})
                        (idx/create-index store "timestampIndex" "timestamp" {:unique false}))
                   (fn [res]
                      (reset! db res))))
 
-(defn get-domain
-  [host]
+(defn get-domain [host]
   (let [host-array (split host ".")
         l (count host-array)]
     (loop [i l]
@@ -52,17 +52,18 @@
           (if (> i 0) (recur (- i 1)))))))
 
 (defn store-request!
-  [r domain loc]
+  [r domain loc tabUrl]
   (idx/add-item @db store-name
                 {:hostname (.-url r)
                  :domain domain
+                 :tabUrl (get-domain (.. (Uri. tabUrl) (getDomain)))
                  :location (if (nil? loc)
                              (do
                                (location/force-get-location!)
                                (str ""))
                              (do (str (.-lat loc) "|" (.-lon loc) "|" (.-acc loc))))
                  :timestamp (.-timeStamp r)}
-                #()))
+                #(log (.. (Uri. tabUrl) (getDomain)))))
 
 (defn get-and-store-psl!
   []
@@ -71,7 +72,7 @@
                                                  (reset! psldb (set (split-lines e))))}))
 
 (defn process-request!
-  [r loc]
+  [r loc tabUrl]
   (let [ts (.-timeStamp r)
         host (.. (Uri. (.-url r)) (getDomain))
         domain (get-domain host)
@@ -79,7 +80,7 @@
     (if-not (or (= tab-id -1) (contains? (get @tabdict tab-id) domain))
       (do
        (swap! tabdict update-in [tab-id] conj domain)
-       (store-request! r domain loc)))))
+       (store-request! r domain loc tabUrl)))))
 
 (defn get-domain-count [domain cb]
   (idx/get-by-index @db store-name "domainIndex" domain #(cb (clj->js {:type "count-res" :domain domain :count (count %)}))))
@@ -132,7 +133,6 @@
                    ;(log "arr: " arr " count: " (last n))
                    (update p kw (fn [] (+ (last n) (get p kw))))))
                {} %)]
-       (log x)
        (put! res-chan {:restype "location-counts"
                      :data x}))))
 

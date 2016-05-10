@@ -17,29 +17,40 @@
                                                           :coordinates #js [(subs (get strs 1) 0 7) (subs (first strs) 0 7)]}})) [] (get @db :location-counts))}))))
 
 (register-sub
+  :domain-info
+  (fn [db _] (reaction (get @db :domain-info))))
+
+(register-sub
+  :loading-domain-info?
+  (fn [db _] (reaction (get @db :loading-domain-info?))))
+
+(register-sub
+  :history
+  (fn [db _] (reaction (get @db :history))))
+
+(register-sub
+  :loading-history?
+  (fn [db _] (reaction (get @db :loading-history?))))
+
+(register-sub
   :loading-location-counts?
-  (fn [db _]
-    (reaction (get @db :loading-location-counts?))))
+  (fn [db _] (reaction (get @db :loading-location-counts?))))
 
 (register-sub
   :loading-locations?
-  (fn [db _]
-    (reaction (get @db :loading-locations?))))
+  (fn [db _] (reaction (get @db :loading-locations?))))
 
 (register-sub
   :my-location
-  (fn [db _]
-    (reaction (get @db :my-location))))
+  (fn [db _] (reaction (get @db :my-location))))
 
 (register-sub
   :loading-locations?
-  (fn [db _]
-    (reaction (get @db :loading-locations?))))
+  (fn [db _] (reaction (get @db :loading-locations?))))
 
 (register-sub
   :distinct-locations
-  (fn [db _]
-    (reaction (get @db :distinct-locations))))
+  (fn [db _] (reaction (get @db :distinct-locations))))
 
 (register-sub
   :loading-domains?

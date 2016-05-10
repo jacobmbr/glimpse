@@ -45,7 +45,8 @@
     "webRequest",
     "<all_urls>",
     "geolocation",
-    "tabs"
+    "tabs",
+    "history"
   ],
   "manifest_version": 2
 }

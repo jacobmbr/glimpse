@@ -47,7 +47,7 @@
           "get-counts" (t-storage/get-distinct-domains res-chan)
           "get-locations" (t-storage/get-distinct-locations res-chan)
           "get-location-counts" (t-storage/get-location-counts res-chan)
-          "get-domain" (t-storage/get-all-for-domain res-chan (.-req message))
+          "all-for-domain" (t-storage/get-all-for-domain res-chan (.-req message))
           (log message))
         (recur))
       (remove-client! client)))
@@ -68,7 +68,7 @@
     (post-message! client "a new tab was created")))
 
 (defn message-to-client [tabId msg]
-  (log (str "Connected Tabs: " (reduce #(conj %1 (.. (get-sender %2) -tab -id)) [] @clients)))
+  ;(log (str "Connected Tabs: " (reduce #(conj %1 (.. (get-sender %2) -tab -id)) [] @clients)))
   (doseq [client @clients]
     (if (= tabId (.. (get-sender client) -tab -id))
       (post-message! client (clj->js msg)))))
@@ -90,9 +90,11 @@
       ::browser-action/on-clicked (do
                                     (tell-client-about-click! (oget (first event-args) "id")))
       ::storage/on-changed (.. js/chrome -storage -local (get #(reset! location %)))
-      ::web-request/on-before-request (let [req (first event-args)]
-                                        (tell-client-about-request! req)
-                                        (process-request! req @location))
+      ::web-request/on-before-request (let [req (first event-args)
+                                            tabId (.-tabId (first event-args))]
+                                        (if-not (< tabId 0) (.. js/chrome -tabs (get tabId #(do 
+                                            (tell-client-about-request! req)
+                                            (process-request! req @location (.-url %)))))))
       ::runtime/on-connect (apply handle-client-connection! event-args)
       ::tabs/on-created (tell-clients-about-new-tab!)
       nil)))
