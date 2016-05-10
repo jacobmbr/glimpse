@@ -7,6 +7,7 @@
             [chromex.logging :refer-macros [log info warn error group group-end]]
             [chromex.ext.extension :refer-macros [get-url]]
             [ajax.core :refer [GET]]
+            [thesis.background.location :as location]
             ;[chromex.protocols :refer [get set]]
             [cljs-idxdb.core :as idx]))
 
@@ -56,8 +57,10 @@
                 {:hostname (.-url r)
                  :domain domain
                  :location (if (nil? loc)
-                             (str "")
-                             (str (.-lat loc) "|" (.-lon loc) "|" (.-acc loc)))
+                             (do
+                               (location/force-get-location!)
+                               (str ""))
+                             (do (str (.-lat loc) "|" (.-lon loc) "|" (.-acc loc))))
                  :timestamp (.-timeStamp r)}
                 #()))
 
@@ -98,10 +101,10 @@
       (set!
         (.-onsuccess req)
         (idx/make-rec-acc-fn [] req #(callback
-                                       (doall 
-                                         (reduce 
-                                           (fn [p n] (conj p (get n kw))) 
-                                           [] 
+                                       (doall
+                                         (reduce
+                                           (fn [p n] (conj p (get n kw)))
+                                           []
                                            %)))))))
 
 (defn get-distinct-locations [res-chan]
