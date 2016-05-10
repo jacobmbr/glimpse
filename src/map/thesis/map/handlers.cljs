@@ -9,11 +9,24 @@
 (def response-chan (atom nil))
 
 (defn listen! []
-  (log "listenin")
   (go-loop []
     (when-let [msg (<! @response-chan)]
-      (dispatch [:handle-counts msg]))
-    (recur)))
+      (condp = (.-restype msg)
+        "distinct-domains" (dispatch [:handle-counts (js->clj (.-data msg))])
+        "distinct-locations" (dispatch [:handle-locations (js->clj (.-data msg))])
+        (log "unhandled: " msg))
+    (recur))))
+
+(register-handler
+  :get-locations
+  (fn [db _] 
+    (put! @call-chan {:reqtype "get-locations"})
+    (assoc db :loading-locations? true)))
+
+(register-handler
+  :handle-locations
+  (fn [db [_ res]]
+    (assoc db :distinct-locations res :loading-locations? false)))
 
 (register-handler
   :get-counts
@@ -24,8 +37,7 @@
 (register-handler
   :handle-counts
   (fn [db [_ res]]
-    (let [data (js->clj (.-data res))]
-      (assoc db :distinct-domains data :loading-domains? false))))
+    (assoc db :distinct-domains res :loading-domains? false)))
 
 (register-handler
    :initialise-db             ;; usage: (dispatch [:initialise-db])

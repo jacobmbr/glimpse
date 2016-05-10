@@ -1,4 +1,4 @@
-(ns ^:figwheel-no-load thesis.map
+(ns thesis.map
   (:require [thesis.map.core :as core]))
 
 (core/init!)
