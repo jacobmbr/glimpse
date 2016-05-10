@@ -48,8 +48,8 @@
           "get-locations" (t-storage/get-distinct-locations res-chan)
           "get-domain" (t-storage/get-all-for-domain res-chan (.-req message))
           (log message))
-        (recur)))
-      (remove-client! client))
+        (recur))
+      (remove-client! client)))
       (go (loop []
         (when-let [msg (<! res-chan)]
           (message-to-client tabId (clj->js msg))
@@ -59,7 +59,7 @@
 
 (defn handle-client-connection! [client]
   (add-client! client)
-  (post-message! client #js {"restype" "ACK"})
+  (message-to-client (.. (get-sender client) -tab -id) #js {"restype" "ACK"})
   (run-client-message-loop! client))
 
 (defn tell-clients-about-new-tab! []
@@ -67,9 +67,10 @@
     (post-message! client "a new tab was created")))
 
 (defn message-to-client [tabId msg]
+  (log (str "Connected Tabs: " (reduce #(conj %1 (.. (get-sender %2) -tab -id)) [] @clients)))
   (doseq [client @clients]
     (if (= tabId (.. (get-sender client) -tab -id))
-      (post-message! client msg))))
+      (post-message! client (clj->js msg)))))
 
 (defn tell-client-about-click! [id]
   (.. js/chrome -tabs (captureVisibleTab

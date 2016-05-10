@@ -14,7 +14,7 @@
 
 (defn process-message! [message]
   (condp = (.-restype message)
-    "ACK" (gui/init! @gui-chan @msg-to-gui)
+    "ACK" (do (log "ACK from background") (gui/init! @gui-chan @msg-to-gui))
     "distinct-domains" (put! @msg-to-gui message)
     "distinct-locations" (put! @msg-to-gui message)
     "all-for-domain" (put! @msg-to-gui message)
@@ -40,7 +40,7 @@
 
 (defn connect-to-background-page! []
   (let [background-port (runtime/connect)]
-    (post-message! background-port "hello from map!")
+    ;(post-message! background-port "hello from map!")
     (reset! background-channel background-port)
     (run-message-loop! background-port)))
 

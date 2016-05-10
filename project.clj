@@ -10,6 +10,7 @@
                  [hiccups "0.3.0"]
                  [cljs-ajax "0.5.4"]
                  [reagent "0.6.0-alpha"]
+                 [re-frame "0.7.0"]
                  [binaryage/devtools "0.6.1"]
                  [timothypratley/reanimated "0.1.4"]
                  [environ "1.0.2"]]
