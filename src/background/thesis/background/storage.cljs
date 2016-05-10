@@ -94,7 +94,7 @@
                              #(put! res-chan {:restype "all-for-domain"
                                    :data %})))))
 
-(defn get-distinct-index [res-chan idx kw callback]
+(defn get-distinct-index [idx kw callback]
   (let [req (.. (idx/get-tx-store @db store-name)
                 (index idx)
                 (openCursor null "nextunique"))]
@@ -107,12 +107,41 @@
                                            []
                                            %)))))))
 
+(defn get-distinct-index-with-counts [idx kw callback]
+  (let [req (.. (idx/get-tx-store @db store-name)
+                (index idx)
+                (openCursor null "next"))]
+      (set!
+        (.-onsuccess req)
+        (idx/make-rec-acc-fn [] req #(callback
+                                       (doall
+                                         (reduce
+                                           (fn [p n] (if (= (get n kw) "") 
+                                                       (do p)
+                                                       (do
+                                                         (update-in p [(get n kw)] inc))))
+                                           {} %)))))))
+
+
+(defn get-location-counts [res-chan]
+  (get-distinct-index-with-counts "locationIndex" :location
+    #(let [x (reduce 
+               (fn [p n] 
+                 (let [arr (vec (map (fn [e] (subs e 0 7)) (split (first n) #"\|")))
+                       kw (join "|" (subvec arr 0 2))]
+                   ;(log "arr: " arr " count: " (last n))
+                   (update p kw (fn [] (+ (last n) (get p kw))))))
+               {} %)]
+       (log x)
+       (put! res-chan {:restype "location-counts"
+                     :data x}))))
+
 (defn get-distinct-locations [res-chan]
-  (get-distinct-index res-chan "locationIndex" :location
+  (get-distinct-index "locationIndex" :location
     #(put! res-chan {:restype "distinct-locations"
                      :data %})))
 
 (defn get-distinct-domains [res-chan]
-  (get-distinct-index res-chan "domainIndex" :domain
+  (get-distinct-index "domainIndex" :domain
     #(put! res-chan {:restype "distinct-domains"
                      :data %})))

@@ -46,6 +46,7 @@
           "ind-clicked!" (tell-client-about-click! tabId)
           "get-counts" (t-storage/get-distinct-domains res-chan)
           "get-locations" (t-storage/get-distinct-locations res-chan)
+          "get-location-counts" (t-storage/get-location-counts res-chan)
           "get-domain" (t-storage/get-all-for-domain res-chan (.-req message))
           (log message))
         (recur))

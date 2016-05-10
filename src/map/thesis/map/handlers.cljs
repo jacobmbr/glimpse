@@ -1,6 +1,7 @@
 (ns thesis.map.handlers
   (:require-macros [cljs.core.async.macros :refer [go-loop go]])
   (:require [reagent.core :as r]
+            [chromex.ext.storage :as storage]
             [cljs.core.async :refer [put!]]
             [chromex.logging :refer-macros [log]]
             [re-frame.core :refer [register-handler path trim-v after debug dispatch]]))
@@ -14,8 +15,25 @@
       (condp = (.-restype msg)
         "distinct-domains" (dispatch [:handle-counts (js->clj (.-data msg))])
         "distinct-locations" (dispatch [:handle-locations (js->clj (.-data msg))])
+        "location-counts" (dispatch [:handle-location-counts (js->clj (.-data msg))])
         (log "unhandled: " msg))
     (recur))))
+
+(register-handler
+  :get-my-location
+  (fn [db _] 
+    (let [local-storage (storage/get-local)]
+      (.. js/chrome -storage -local (get #(dispatch [:handle-location %]))))
+    db))
+
+(register-handler
+  :handle-location
+  debug
+  (fn [db [_ res]]
+    (let [loc (js->clj res :keywordize-keys true)]
+      (if (nil? (:lat loc)) (dispatch [:get-my-location]))
+      (assoc db :my-location {:lat (get loc :lat)
+                              :lon (get loc :lon)}))))
 
 (register-handler
   :get-locations
@@ -24,8 +42,21 @@
     (assoc db :loading-locations? true)))
 
 (register-handler
+  :get-location-counts
+  (fn [db [_ res]]
+    (put! @call-chan {:reqtype "get-location-counts"})
+    (assoc db :loading-location-counts? true)))
+
+(register-handler
+  :handle-location-counts
+  (fn [db [_ res]]
+    debug
+    (assoc db :location-counts res :loading-location-counts? false)))
+
+(register-handler
   :handle-locations
   (fn [db [_ res]]
+    (dispatch [:get-location-counts res])
     (assoc db :distinct-locations res :loading-locations? false)))
 
 (register-handler
