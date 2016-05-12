@@ -63,7 +63,7 @@
                                (str ""))
                              (do (str (.-lat loc) "|" (.-lon loc) "|" (.-acc loc))))
                  :timestamp (.-timeStamp r)}
-                #(log (.. (Uri. tabUrl) (getDomain)))))
+                #()))
 
 (defn get-and-store-psl!
   []
@@ -77,9 +77,11 @@
         host (.. (Uri. (.-url r)) (getDomain))
         domain (get-domain host)
         tab-id (.-tabId r)]
-    (if-not (or (= tab-id -1) (contains? (get @tabdict tab-id) domain))
+    (if-not (or 
+              (= tab-id -1) 
+              (contains? (get @tabdict tab-id) domain))
       (do
-       (swap! tabdict update-in [tab-id] conj domain)
+       (swap! tabdict update-in [tab-id] #(set (conj (into [] %) domain)))
        (store-request! r domain loc tabUrl)))))
 
 (defn get-domain-count [domain cb]
@@ -117,7 +119,7 @@
         (idx/make-rec-acc-fn [] req #(callback
                                        (doall
                                          (reduce
-                                           (fn [p n] (if (= (get n kw) "") 
+                                           (fn [p n] (if (= (get n kw) "")
                                                        (do p)
                                                        (do
                                                          (update-in p [(get n kw)] inc))))
@@ -126,8 +128,8 @@
 
 (defn get-location-counts [res-chan]
   (get-distinct-index-with-counts "locationIndex" :location
-    #(let [x (reduce 
-               (fn [p n] 
+    #(let [x (reduce
+               (fn [p n]
                  (let [arr (vec (map (fn [e] (subs e 0 7)) (split (first n) #"\|")))
                        kw (join "|" (subvec arr 0 2))]
                    ;(log "arr: " arr " count: " (last n))
