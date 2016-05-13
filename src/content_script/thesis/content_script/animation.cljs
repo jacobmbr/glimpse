@@ -45,7 +45,8 @@
              scale (if condition scale (- 1 scale))]
          (if (< t duration)
            (do
-             (js/setTimeout #(swap! anim update :frame inc))
+             ;TODO NOte: I changed this from setTimout
+             (js/requestAnimationFrame #(swap! anim update :frame inc))
              [:div
               {:style {:transform (str "scale(" scale ")")
                        :opacity scale}}
@@ -198,7 +199,7 @@
   mass, stiffness, damping of the spring."
   ([x2] (spring x2 {}))
   ([x2 options]
-   (let [{:keys [from velocity]
+   (let [{:keys [from velocity stiffness mass damping]
           :or {from @x2
                velocity 0
                mass 10

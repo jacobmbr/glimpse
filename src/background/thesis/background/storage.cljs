@@ -87,6 +87,17 @@
 (defn get-domain-count [domain cb]
   (idx/get-by-index @db store-name "domainIndex" domain #(cb (clj->js {:type "count-res" :domain domain :count (count %)}))))
 
+(defn get-all-for-index [res-chan idx value]
+  (let [req (.. (idx/get-tx-store @db store-name)
+                (index idx)
+                (openCursor (.. js/IDBKeyRange (only value)) "next"))]
+      (set!
+        (.-onsuccess req)
+        (idx/make-rec-acc-fn [] req
+                             #(put! res-chan {:restype (str "all-for-" idx)
+                                              :value value
+                                   :data %})))))
+
 (defn get-all-for-domain [res-chan domain]
   (let [req (.. (idx/get-tx-store @db store-name)
                 (index "domainIndex")
@@ -144,6 +155,10 @@
                      :data %})))
 
 (defn get-distinct-domains [res-chan]
-  (get-distinct-index "domainIndex" :domain
+  (get-distinct-index-with-counts "domainIndex" :domain
     #(put! res-chan {:restype "distinct-domains"
                      :data %})))
+
+(defn get-site-info [res-chan domain]
+  (get-all-for-index res-chan "tabUrlIndex" domain))
+

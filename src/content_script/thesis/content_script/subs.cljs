@@ -10,6 +10,14 @@
     (reaction (count (get @db :data)))))
 
 (register-sub
+  :has-info?
+  (fn [db [_ _]] (reaction (get-in @db [:has-info?]))))
+
+(register-sub
+  :tab-id
+  (fn [db [_ i]] (reaction (get-in @db [:tab-id]))))
+
+(register-sub
   :in-data
   (fn [db [_ i]]
     (reaction (get-in @db [:data i]))))

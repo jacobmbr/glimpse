@@ -4,6 +4,7 @@
   (:require [reagent.core :as r]
             [chromex.ext.storage :as storage]
             [cljs.core.async :refer [put!]]
+            [clojure.string :as string]
             [chromex.logging :refer-macros [log]]
             [thesis.background.storage :as st]
             [re-frame.core :refer [register-handler path trim-v after debug dispatch]]))
@@ -19,6 +20,9 @@
         "distinct-locations" (dispatch [:handle-locations (js->clj (.-data msg))])
         "location-counts" (dispatch [:handle-location-counts (js->clj (.-data msg))])
         "all-for-domain" (dispatch [:handle-domain-info (js->clj (.-data msg))])
+        "all-for-tabUrlIndex" (dispatch [:handle-site-info 
+                                         {:data (js->clj (.-data msg))
+                                          :domain (.-value msg)}])
         (log "unhandled: " msg))
     (recur))))
 
@@ -35,7 +39,7 @@
   (fn [db [_ res]]
     (let [test-set (r/atom (set []))]
       (assoc db :history (reduce (fn [p n] 
-                (let [url (.. (Uri. (.-url n)) (getDomain))]
+                (let [url (string/replace (.. (Uri. (.-url n)) (getDomain)) "www." "")]
                   (if (contains? @test-set url)
                     p
                     (do 
@@ -51,8 +55,26 @@
 (register-handler
   :handle-domain-info
   (fn [db [_ res]]
-    (assoc db :domain-info  res 
+    (assoc db :domain-info res 
                  :loading-domain-info? false)))
+
+(register-handler
+  :handle-site-info
+  (fn [db [_ res]]
+    (assoc db :site-info (:data res)
+              :current-site-info (:domain res)
+              :loading-site-info? false)))
+
+(register-handler
+  :display-info-box
+  (fn [db [_ yo]]
+    (assoc db :display-info-box? yo)))
+
+(register-handler
+  :get-site-info
+  (fn [db [_ domain]]
+    (put! @call-chan {:reqtype "site-info" :req domain})
+    (assoc db :loading-site-info? true)))
 
 (register-handler
   :get-my-location
@@ -84,7 +106,6 @@
 (register-handler
   :handle-location-counts
   (fn [db [_ res]]
-    debug
     (assoc db :location-counts res :loading-location-counts? false)))
 
 (register-handler
@@ -96,13 +117,16 @@
 (register-handler
   :get-counts
   (fn [db _] 
-    (put! @call-chan {:reqtype "get-counts"})
-    (assoc db :loading-domains? true)))
+    (if (:has-loaded-domains? db)
+      (do 
+        (put! @call-chan {:reqtype "get-counts"})
+        (assoc db :loading-domains? true))
+      db)))
 
 (register-handler
   :handle-counts
   (fn [db [_ res]]
-    (assoc db :distinct-domains res :loading-domains? false)))
+    (assoc db :distinct-domains res :loading-domains? false :has-loaded-domains? true)))
 
 (register-handler
    :initialise-db             ;; usage: (dispatch [:initialise-db])
@@ -112,6 +136,34 @@
      (reset! response-chan r)
      (listen!)
      {:test true}))
+
+(register-handler
+  :handle-mouse
+  (fn [db [_ m]]
+    (assoc db :mouse m)))
+
+(register-handler
+  :track-window
+  (fn [db _]
+    (.. js/window (addEventListener "resize" #(dispatch [:handle-window])))
+    (assoc db :window [(.. js/window -innerWidth) (.. js/window -innerHeight)])))
+
+(register-handler
+  :handle-window
+  (fn [db _]
+    (assoc db :window [(.. js/window -innerWidth) (.. js/window -innerHeight)])))
+(register-handler
+  :track-mouse
+  (fn [db _]
+    (.. js/window (addEventListener "mousemove" #(dispatch [:handle-mouse [(.-clientX %) (.-clientY %)]])))
+    (assoc db :mouse [0 0])))
+
+(register-handler
+  :infobox
+  (fn [db [_ domain]]
+    (dispatch [:get-site-info domain])
+    (dispatch [:display-info-box true])
+    (assoc db :loading-site-info? true)))
 
 (defn get-domain [domain] (put! @call-chan {:reqtype "get-domain" :req domain}))
 (defn get-locations [] (put! @call-chan {:reqtype "get-locations"}))

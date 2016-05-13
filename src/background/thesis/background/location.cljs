@@ -22,7 +22,7 @@
        (recur))
 
     (go-loop []
-      (<! (timeout 30000))
+      (<! (timeout 10000))
       (>! geo-trigger "")
       (recur))
 

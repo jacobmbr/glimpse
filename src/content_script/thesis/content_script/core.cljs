@@ -8,6 +8,8 @@
             [chromex.logging :refer-macros [log]]
             [chromex.protocols :refer [post-message!]]
             [chromex.ext.runtime :as runtime :refer-macros [connect]]
+            [re-frame.core :refer [register-handler path trim-v after debug dispatch]]
+            [thesis.content-script.handlers]
             [thesis.content-script.canvas :as tc]
             [thesis.content-script.indicator :as indicator]
             [thesis.content-script.gui :as gui]))
@@ -20,8 +22,9 @@
     "init" (let [img (.-img msg)
                  tabdict (.-tabdict msg)]
              (log "init!")
-             (gui/init! img tabdict))
+             (gui/init! img tabdict (.-url msg)))
     "new-request" (indicator/add-domain (.-tabdict msg))
+    "domains-info" (dispatch [:update-domain-info (.-res msg)])
     (log msg)))
 
 (defn run-message-loop! [message-channel]

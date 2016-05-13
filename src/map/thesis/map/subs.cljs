@@ -17,8 +17,36 @@
                                                           :coordinates #js [(subs (get strs 1) 0 7) (subs (first strs) 0 7)]}})) [] (get @db :location-counts))}))))
 
 (register-sub
+  :display-info-box?
+  (fn [db _] (reaction (get @db :display-info-box?))))
+
+(register-sub
+  :current-site-info
+  (fn [db _] (reaction (get @db :current-site-info))))
+
+(register-sub
+  :site-info
+  (fn [db _] (reaction (get @db :site-info))))
+
+(register-sub
+  :dim
+  (fn [db _] (reaction (get @db :window))))
+
+(register-sub
+  :mouse
+  (fn [db _] (reaction (get @db :mouse))))
+
+(register-sub
+  :single-domain 
+  (fn [db [_ domain]] (reaction (get @db :domain-info))))
+
+(register-sub
   :domain-info
   (fn [db _] (reaction (get @db :domain-info))))
+
+(register-sub
+  :loading-site-info?
+  (fn [db _] (reaction (get @db :loading-site-info?))))
 
 (register-sub
   :loading-domain-info?

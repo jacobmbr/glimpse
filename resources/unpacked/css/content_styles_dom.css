@@ -16,16 +16,22 @@ h1.ext-h1 {
   pointer-events: none;
 }
 #ext-canvas-container {
+background-image: radial-gradient(farthest-corner at 50% 50% , #051e2e 0%, #062538 1000%);
   height: 100%;
   width: 100%;
   position: fixed;
   left: 0;
   top: 0;
-  background-color: #051e2e;
+  /*background-color: #051e2e;*/
   z-index:1000000091 !important;
-  transition: all 0.5s ease-in-out;
+  transition: all 0.2s ease-in-out;
+  font-family: "Source Code Pro" !important;
   overflow-y: scroll
 }
 #ext-screenshot {
   pointer-events: none;
 }
+#ext-indicator, #ext-indicator-con {
+  z-index:1000000091 !important;
+}
+/*h1 > span {font-size: 16px}*/

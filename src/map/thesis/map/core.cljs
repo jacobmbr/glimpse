@@ -21,6 +21,7 @@
     "distinct-locations" (put! @msg-to-gui message)
     "location-counts" (put! @msg-to-gui message)
     "all-for-domain" (put! @msg-to-gui message)
+    "all-for-tabUrlIndex" (put! @msg-to-gui message)
     (if-not (= "new-request" (.-type message)) (log "map: got message:" message))))
 
 (defn run-message-loop! [message-channel]

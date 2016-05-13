@@ -72,7 +72,8 @@
 (defn init! []
   (append!
     (sel "body") 
-    (html [:div#ext-indicator-con]))
+    (html [:div#ext-indicator-con {:style {:positon "absolute"
+                                           :z-index "1000000091 !important"}}]))
   (r/render [indicator-component] (by-id "ext-indicator-con"))
   (reset! ind-chan (chan))
   @ind-chan)

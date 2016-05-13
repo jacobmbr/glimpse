@@ -1,4 +1,5 @@
 (ns thesis.background.core
+  (:import goog.Uri)
   (:require-macros [cljs.core.async.macros :refer [go go-loop]])
   (:require [goog.string :as gstring]
             [goog.string.format]
@@ -38,15 +39,19 @@
 
 (defn run-client-message-loop! [client]
   (let [res-chan (chan)
-        tabId (.. (get-sender client) -tab -id)]
+        tabId (.. (get-sender client) -tab -id)
+        url (.. (get-sender client) -tab -url)
+        domain (.. (Uri. url) (getDomain))]
+    (log url)
     (go (loop []
       (when-let [message (<! client)]
         (log (str "Tab " tabId ": " (.-reqtype message)))
         (condp = (.-reqtype message)
-          "ind-clicked!" (tell-client-about-click! tabId)
+          "ind-clicked!" (tell-client-about-click! tabId domain)
           "get-counts" (t-storage/get-distinct-domains res-chan)
           "get-locations" (t-storage/get-distinct-locations res-chan)
           "get-location-counts" (t-storage/get-location-counts res-chan)
+          "site-info" (t-storage/get-site-info res-chan (.-req message))
           "all-for-domain" (t-storage/get-all-for-domain res-chan (.-req message))
           (log message))
         (recur))
@@ -73,10 +78,10 @@
     (if (= tabId (.. (get-sender client) -tab -id))
       (post-message! client (clj->js msg)))))
 
-(defn tell-client-about-click! [id]
+(defn tell-client-about-click! [id url]
   (.. js/chrome -tabs (captureVisibleTab
                         #js {"quality" 50}
-                        #(message-to-client id (clj->js {:type "init" :id id :img % :tabdict (t-storage/get-tabdict id)})))))
+                        #(message-to-client id (clj->js {:type "init" :id id :img % :tabdict (t-storage/get-tabdict id) :url url})))))
 
 (defn tell-client-about-request! [r]
   (message-to-client (.-tabId r) (clj->js {:type "new-request" :tabdict (t-storage/get-tabdict (.-tabId r))})))
@@ -88,7 +93,7 @@
     ;(log (gstring/format "BACKGROUND: got chrome event (%05d)" event-num) (str event-id))
     (case event-id
       ::browser-action/on-clicked (do
-                                    (tell-client-about-click! (oget (first event-args) "id")))
+                                    (tell-client-about-click! (oget (first event-args) "id") "huhu.com")); TODO FIX
       ::storage/on-changed (.. js/chrome -storage -local (get #(reset! location %)))
       ::web-request/on-before-request (let [req (first event-args)
                                             tabId (.-tabId (first event-args))]
