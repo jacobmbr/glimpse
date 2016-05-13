@@ -4,7 +4,7 @@
   (:require [thesis.content-script.draw :as draw :refer [draw-entity draw-text]]
             [devtools.core :as devtools]
             [thesis.dev]
-            [cljs.core.async :refer [chan close! <! >!]]
+            [cljs.core.async :refer [chan close! <! >! put!]]
             [chromex.logging :refer-macros [log]]
             [chromex.protocols :refer [post-message!]]
             [chromex.ext.runtime :as runtime :refer-macros [connect]]
@@ -16,16 +16,32 @@
 
 ; -- a message loop ---------------------------------------------------------------------------------------------------------
 (def background-chan (atom nil))
+(def count-chan (chan))
+(def counts (atom nil))
 
 (defn process-message! [msg]
   (condp = (.-type msg)
     "init" (let [img (.-img msg)
-                 tabdict (.-tabdict msg)]
-             (log "init!")
-             (gui/init! img tabdict (.-url msg)))
+                 tabdict (.-tabdict msg)
+                 core-chan (chan)]
+             ;(reset! gui-chan core-chan)
+             (go 
+               (if (nil? @counts)
+                 (reset! counts (<! count-chan)))
+                 (gui/init! img tabdict (.-url msg) @counts)
+                 (run-gui-loop! core-chan)))
     "new-request" (indicator/add-domain (.-tabdict msg))
     "domains-info" (dispatch [:update-domain-info (.-res msg)])
-    (log msg)))
+    (if (= (.-restype msg) "distinct-domains") 
+      (put! count-chan (.-data msg))
+      (log msg))))
+
+(defn run-gui-loop! [msg-chan]
+  (go-loop []
+    (when-let [msg (<! msg-chan)]
+      (log "gui loop" msg)
+      ;(post-message! @background-chan (clj->js {:reqtype "get-counts"}))
+      (recur))))
 
 (defn run-message-loop! [message-channel]
   (log "CONTENT SCRIPT: starting message loop...")
@@ -38,7 +54,6 @@
 (defn run-indicator-message-loop! [ind-chan]
   (go (loop []
     (when-let [msg (<! ind-chan)]
-      ;(log msg)
       (post-message! @background-chan (clj->js {:reqtype "ind-clicked!"}))
       (recur)))))
 
@@ -48,6 +63,7 @@
   (let [background-port (runtime/connect)]
     (post-message! background-port "hello from CONTENT SCRIPT!")
     (reset! background-chan background-port)
+    (post-message! @background-chan (clj->js {:reqtype "get-counts"}))
     (run-message-loop! background-port)))
 
 ; -- main entry point -------------------------------------------------------------------------------------------------------

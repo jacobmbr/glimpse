@@ -31,15 +31,18 @@
                           :font-style "italic"
                           :font-weight "200"
                           :color "white"}} "Third parties who see you on " @tabId]])))
-(defn satellite [i]
-  (let [el (subscribe [:in-data i])
-        text (get @el :text)
+(defn satellite [dom]
+  (let [el (subscribe [:in-data dom])
+        text (name dom)
         x (r/cursor el [:x])
         y (r/cursor el [:y])
+        cnt (r/cursor el [:count])
+        cspring (anim/spring cnt)
         fs (reaction (get @el :font-size))
         xsp (anim/spring x {:damping 2})
         ysp (anim/spring y {:damping 2})
         hasinfo? (subscribe [:has-info?])
+        show-text? (subscribe [:show-text?])
         fssp (anim/interpolate-to fs)]
     (r/create-class
       {:component-will-unmount
@@ -47,29 +50,55 @@
        :display-name "satellite"
        :reagent-render
         (fn [i]
-          [:div {:style {:min-width "300px" :position "absolute" :left (str (+ 20 @xsp)) :top (str @ysp "px")}}
-           [:h1 {:class "ext-h1" 
+          [:div {:style {:min-width "300px" 
+                         :position "relative" 
+                         :padding-bottom "10px"
+                         ;:left (str (+ 20 @xsp)) :top (str @ysp "px")
+                         :transform (str "translate(" (+ 20 @xsp) "px," @ysp "px)")
+                         }}
+           [:p {:class "ext-h1" 
                  :style {:font-size (str @fssp "px")
-                         :font-weight "400"
+                         :color "white"
+                         :clear "right"
+                         ;:line-height (str @fssp "px")
+                         ;:font-weight "400"
                          ;:background-color "black"
-                         :text-decoration (if @hasinfo? "underline" "none")
+                         ;:text-decoration (if @hasinfo? "underline" "none")
                          ;:transform (str "translate(" @xsp "px," @ysp "px)")
-                         }} (str text) (if @hasinfo? [:span {:style {:text-decoration "none"}} (int (rand 40))])
-           ]])})))
+                         }} 
+            text]
+            (if @show-text? [:span {:style {:color "#eee"
+                            :opacity (str (if @show-text? "1" "0"))}} 
+             "… saw you " @cnt " other times."])
+           ])})))
 
 (defn satellites []
-  (let [cnt (subscribe [:count])]
-    [:div {:style {:position "absolute" :left "0" :top "0"}}
-     (for [i (range @cnt)]
-       ^{:key i} [satellite i])]))
+  (let [data (subscribe [:data])
+        align? (subscribe [:align?])]
+    [:div {:style {:position "fixed" 
+                   :left (if @align? "50%" "0")
+                   :top (if @align? "20%" "0")
+                   :transition "all 0.5s cubicInOUt"
+                   ;:height "70%"
+                   :overflow (if @align? "scroll" "visible" )}}
+     (for [dom (keys @data)]
+       ^{:key dom} [satellite dom])]))
+
+(defn debug []
+  (let [data (subscribe [:data])]
+    [:div {:style {:position "fixed" :bottom "0px" :color "white" :left "0px"}} (str @data)] ))
 
 (defn screenshot []
   (let [tilt (r/atom 0)
         rotation (anim/spring tilt)
-        flip (r/atom 1)
-        scale (anim/spring flip {:mass 20 :damping 2})
+        scale-sub (subscribe [:img-scale])
+        scale (anim/spring scale-sub {:mass 20 :damping 2})
         img-pos (subscribe [:img-pos])
         img-data (subscribe [:img-data])
+        align? (subscribe [:align?])
+        dim (subscribe [:dim])
+        xx (reaction (-> @dim (first) (/ 2) (* -1)))
+        yy (reaction (-> @dim (peek) (/ 2) (* -1)))
         x (reaction (first @img-pos))
         y (reaction (peek @img-pos))
         xsp (anim/spring x {:duration 500 :damping 3})
@@ -77,24 +106,28 @@
         w (.-innerWidth js/window)]
     (fn a-screenshot []
       [:div 
-       [anim/timeout #(reset! flip 0.3) 100]
        ;[anim/timeout #(reset! tilt 45) 100]
-       [:img {:src @img-data
+       [:img {:on-click #(dispatch [:exit])
+              :src @img-data
               :id "ext-screenshot"
               :style {:margin "0 auto"
                       :width "100%"
-                      :transform (str "scale(" @scale "," @scale ") rotateY(" 0 "deg)" " translate(" @xsp "px," @ysp "px)")}}]])))
+                      :transform (str 
+                                   "scale(" @scale "," @scale ") "
+                                   (if @align? (str "translate(" @xsp "px," @ysp "px)")))}}]])))
 
 (defn root []
   [:div
    [satellites]
    [heading]
-   [screenshot]])
+   [screenshot]
+   ;[debug]
+   ])
 
 (defn get-rand-between [v low up]
   (+ (rand (* up (- v (* low v)))) (* low v)))
 
-(defn init! [img tabdict tabId]
+(defn init! [img tabdict tabId counts]
   (if-not (by-id "ext-canvas-container")
     (let [node (.. js/document (createElement "div"))
           el (.. js/document -body (appendChild node))
@@ -104,27 +137,21 @@
       ; OPTIONAL: Kill all scripts and iframes on the page. 
       (destroy! (sel "script"))
       (destroy! (sel "iframe"))
-      (->> (vec (map #(hash-map
+      (->>  (reduce #(assoc %1 (keyword %2) (hash-map
                            :x (/ (first dim) 2)
                            :y (/ (peek dim) 2)
                            :font-size 0.5
-                           :text %
-                           ) (vec tabdict)))
+                           )) {} (vec tabdict))
             (reset! data))
-      (dispatch-sync [:initialise-db img dim @data tabId])
+      (dispatch-sync [:initialise-db img dim @data tabId counts])
+      ;(dispatch [:get-counts])
 
-      ;(.. js/window (addEventListener "mousemove" #(swap! mouse assoc 0 (.-clientX %) 1 (.-clientY %))))
+      (.. js/window (addEventListener "resize" #(dispatch [:resize [(.-innerWidth js/window) (.-innerHeight js/window)]])))
 
-      ;(js/setTimeout (fn [] (swap! data conj {:x 200 :font-size 10 :y 200 :text "huhu" :dots 25})) 2000)
-      (js/setTimeout #(dispatch [:data-satellites]) 1000)
-      (js/setTimeout #(dispatch [:handle-info true]) 2000)
+      (js/setTimeout #(dispatch [:scale-down-img] 100))
+      (js/setTimeout #(dispatch [:data-satellites]) 500)
+      (js/setTimeout #(dispatch [:handle-info true]) 3000)
       ;(js/setTimeout #(dispatch [:data-satellites]) 4000)
-      (js/setTimeout #(dispatch [:update-img-pos [(-> dim (first) (/ 2) (* -1)) (-> dim (peek) (/ 2) (* -1))]]) 2000)
-      ;(js/setTimeout #(reset! img-pos [20 20]) 2000)
-
-      ;(js/setTimeout (fn [] (swap! data (fn [e] (vec (map-indexed #(assoc %2 :y (* 20 %1) ) e))))) 4000)
-
-
-      ;(js/setTimeout (fn [] (swap! data (fn [e] (vec (map #(update % :x + 200) e))))) 6000)
+      (js/setTimeout #(dispatch [:update-img-pos [(-> dim (first) (/ 2) (* -1)) (-> dim (peek) (/ 2) (* -1))]]) 3000)
 
       (r/render [root] (by-id "ext-canvas-container")))))

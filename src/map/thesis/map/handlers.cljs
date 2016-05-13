@@ -61,6 +61,7 @@
 (register-handler
   :handle-site-info
   (fn [db [_ res]]
+    (log (:data res))
     (assoc db :site-info (:data res)
               :current-site-info (:domain res)
               :loading-site-info? false)))

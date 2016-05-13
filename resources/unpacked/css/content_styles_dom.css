@@ -29,7 +29,6 @@ background-image: radial-gradient(farthest-corner at 50% 50% , #051e2e 0%, #0625
   overflow-y: scroll
 }
 #ext-screenshot {
-  pointer-events: none;
 }
 #ext-indicator, #ext-indicator-con {
   z-index:1000000091 !important;
