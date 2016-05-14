@@ -3,7 +3,7 @@
   (:require-macros [cljs.core.async.macros :refer [go go-loop]])
   (:require [goog.string :as gstring]
             [goog.string.format]
-            [cljs.core.async :refer [<! chan]]
+            [cljs.core.async :refer [<! chan close!]]
             [chromex.logging :refer-macros [log info warn error group group-end]]
             [chromex.support :refer-macros [oget]]
             [chromex.chrome-event-channel :refer [make-chrome-event-channel]]
@@ -28,7 +28,7 @@
 
 (defn add-client! [client]
   ;(log "BACKGROUND: client connected" (get-sender client))
-  (log "Clients: " @clients)
+  ;(log "Clients: " @clients)
   (t-storage/tabdict-add-client (.. (get-sender client) -tab -id))
   (swap! clients conj client))
 
@@ -68,18 +68,18 @@
                        (.. (oget js/chrome "tabs") (create #js {"url" (.. (oget js/chrome "extension") (getURL "map.html"))} #(reset! initialise-tab {:typ typ :url target-url}))))
           (log "unhandled!: " message))
           (recur))
-      (remove-client! client)))
+        (do (close! res-chan) (remove-client! client))))
       (go (loop []
         (when-let [msg (<! res-chan)]
           (message-to-client tabId (clj->js msg))
-          (recur))))))
+          (recur))
+        (log "res chan closed for " url)))))
 
 ; -- event handlers ---------------------------------------------------------------------------------------------------------
 
 (defn handle-client-connection! [client]
-  ;(remove-client-by-id! client)
   (add-client! client)
-  (log "Handle client connection: " client)
+  ;(log "Handle client connection: " client)
   (message-to-client (oget (get-sender client) "tab" "id") #js {"restype" "ACK" "init-url" (get @initialise-tab :url) "typ" (get @initialise-tab :typ)})
   (run-client-message-loop! client))
 
@@ -103,8 +103,11 @@
   (let [tabId (oget r "tabId")]
     (.. (oget js/chrome "tabs") 
       (get tabId
-         #(if-not (= (subs (oget % "url") 0 19) "chrome-extension://")
-            (message-to-client tabId (clj->js {:type "new-request" :tabdict (t-storage/get-tabdict tabId)})))))))
+         #(let [url (oget % "url")]
+            (if-not (or 
+                      (= (subs url 0 19) "chrome-extension://")
+                      (= (subs url 0 9) "chrome://"))
+              (message-to-client tabId (clj->js {:type "new-request" :tabdict (t-storage/get-tabdict tabId)}))))))))
 
 ; -- main event loop --------------------------------------------------------------------------------------------------------
 

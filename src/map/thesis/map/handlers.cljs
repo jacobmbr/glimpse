@@ -34,7 +34,6 @@
         "all-for-domain" (let [res (js->clj msg)
                                typ (get res "typ")
                                data (get res "data")]
-                           (log typ data msg)
                            (condp = typ
                              "site" (dispatch [:handle-site-info data typ])
                              "domain" (dispatch [:handle-domain-info data typ])))
