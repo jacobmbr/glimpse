@@ -19,6 +19,13 @@
 (def count-chan (chan))
 (def counts (atom nil))
 
+(defn run-gui-loop! [msg-chan]
+  (go-loop []
+    (when-let [msg (<! msg-chan)]
+      (log "gui loop" msg)
+      (post-message! @background-chan (clj->js (assoc msg :reqtype "open-tab")))
+      (recur))))
+
 (defn process-message! [msg]
   (condp = (.-type msg)
     "init" (let [img (.-img msg)
@@ -28,20 +35,13 @@
              (go 
                (if (nil? @counts)
                  (reset! counts (<! count-chan)))
-                 (gui/init! img tabdict (.-url msg) @counts)
+                 (gui/init! img tabdict (.-url msg) @counts core-chan)
                  (run-gui-loop! core-chan)))
     "new-request" (indicator/add-domain (.-tabdict msg))
     "domains-info" (dispatch [:update-domain-info (.-res msg)])
     (if (= (.-restype msg) "distinct-domains") 
       (put! count-chan (.-data msg))
       (log msg))))
-
-(defn run-gui-loop! [msg-chan]
-  (go-loop []
-    (when-let [msg (<! msg-chan)]
-      (log "gui loop" msg)
-      ;(post-message! @background-chan (clj->js {:reqtype "get-counts"}))
-      (recur))))
 
 (defn run-message-loop! [message-channel]
   (log "CONTENT SCRIPT: starting message loop...")
@@ -61,7 +61,6 @@
 
 (defn connect-to-background-page! []
   (let [background-port (runtime/connect)]
-    (post-message! background-port "hello from CONTENT SCRIPT!")
     (reset! background-chan background-port)
     (post-message! @background-chan (clj->js {:reqtype "get-counts"}))
     (run-message-loop! background-port)))

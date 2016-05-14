@@ -1,0 +1,2 @@
+var CLOSURE_NO_DEPS = true;
+var CLOSURE_UNCOMPILED_DEFINES = null;

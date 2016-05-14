@@ -20,20 +20,29 @@
         "<all_urls>"
       ],
       "js": [
-        "compiled/content_script.js"
+        "cs_override.js",
+        "js/pt.js",
+        "js/three.min.js",
+        "js/tween.min.js",
+        "js/CSS3DRenderer.js",
+        "compiled/content_script.js",
+        "content-script.js"
       ],
-      "run_at": "document_end"
+      "css": ["css/content_styles_dom.css"],
+      "run_at": "document_start"
     }
   ],
   "background": {
     "page": "background.html",
-    "persistent": false
+    "persistent": true
   },
   "permissions": [
     "storage",
     "webRequest",
     "<all_urls>",
-    "geolocation"
+    "geolocation",
+    "tabs",
+    "history"
   ],
   "manifest_version": 2
 }

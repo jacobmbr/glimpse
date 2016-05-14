@@ -36,7 +36,7 @@
                       ;:position "absolute"
                       ;:transform (str "translate(" (* 50 (+ 1 %1)) "px,100px)")
                       }} (gs/unescapeEntities"&#8212;&#8212;&#8212;&nbsp;") 
-             [:span {:on-click #(dispatch [:infobox text])
+             [:span {:on-click #(dispatch [:show-site-info text])
                      :style {:font-size (str (- 30 (count text)) "px")}} (- 30 (count text)) " " text ]])})))
 
 (defn display-history []
@@ -58,8 +58,8 @@
                        :position "absolute"
                        :left "30px"}}
          [:div {:class "history-div" :style {:margin "50px 0 50px 0" }}
-          (gs/unescapeEntities"&#8212;&#8212;&#8212;&nbsp;") [:span {:style {:text-decoration "underline"
-                                                                             :font-size "25px"}} "Your History"]]
+          (gs/unescapeEntities"&#8212;&#8212;&#8212;&nbsp;") [:a {:href "#" :on-click #(dispatch [:show-state true])} [:span {:style {:text-decoration "underline"
+                                                                             :font-size "25px"}} "Your History"]]]
 
          (doall (map-indexed #(do
                          ^{:key %2} [history-item %2]) @history))]])))
@@ -89,33 +89,73 @@
                                                                    :style {:color "white" :font-size "15px"}} x] [:span " - "]])] [:p "loading"])]
          ])))
 
-(defn infobox [domain]
-  (let [info (subscribe [:domain-info domain])
-        site-info (subscribe [:site-info])
-        d (subscribe [:current-site-info])
-        display? (subscribe [:display-info-box?])
-        loading? (subscribe [:loading-site-info?])]
+
+(defn domain-infobox []
+  (let [domain-info (subscribe [:domain-info])
+        domain (reaction (get @domain-info :url))
+        info (reaction (get @domain-info :data))
+        loading? (subscribe [:loading-domain-info?])]
     (fn []
-      (if @display?
-      [:div
-        [:div {:on-click #(dispatch [:display-info-box false])
-               :style {:width "70%"
-                       :height "100%"
-                       :position "absolute"
-                       :left "30%"
-                       :top "0px"
-                       :padding "40px 0 0 0"
-                       :transition "all 0.5s ease"
-                       :background-color "rgba(100,100,100, 0.5)"}}
          (if-not @loading? 
            [:div 
-            [:h1 "Who saw you on " @d]
-             [:h2 (count @site-info) " third parties saw you on " @d "."]
-             [:span (for [x @site-info] ^{:key x} [:p 
+            [:h1 "Who saw you on " @domain]
+             [:h2 (count @info) " third parties saw you on domain " @domain "."]
+             [:span (for [x @info] ^{:key x} [:p 
                                                    (str (get x "domain"))
-                                    ])]]
-           [:h1 "loading..."])]]))))
+                                    ])]
+           [:h1 "loading..."]]))))
 
+(defn site-infobox []
+  (let [entry (subscribe [:site-info])
+        site-info (reaction (get @entry :data))
+        domain (reaction (get @entry :domain))
+        loading? (subscribe [:loading-site-info?])]
+    (fn []
+      ;(log "loading site info? " @loading?)
+      ;(log "current entry" @entry " and loading? " @loading?)
+       (if-not @loading? 
+         [:div 
+          [:h1 "Who saw you on " @domain]
+           [:h2 (count @site-info) " third parties saw you on site " @domain "."]
+           [:span (for [x @site-info] ^{:key x} [:p 
+                                                 (str (get x "domain"))
+                                  ])]
+         ]
+         [:h1 "loading..."]))))
+
+(defn infobox []
+  (let [view-mode (subscribe [:view-mode])
+        display? (subscribe [:display-info-box?])]
+    (fn []
+      ;(log "render: "  @view-mode)
+      [:div    [site-infobox]
+          [site-infobox]
+      (if @display?
+          [:div {:on-click #(dispatch [:display-info-box false])
+                 :style {:width "70%"
+                         :height "100%"
+                         :position "absolute"
+                         :left "30%"
+                         :top "0px"
+                         :padding "40px 0 0 0"
+                         :transition "all 0.5s ease"
+                         :background-color "rgba(100,100,100, 0.5)"}}
+           (if (= @view-mode "site")
+             [domain-infobox]
+             [site-infobox])
+
+             @view-mode]
+          )])))
+
+
+(defn show-state []
+  (let [state (subscribe [:state])
+        display? (subscribe [:show-state?])]
+    (fn []
+      
+     [:div {:style {:width "70%" 
+                    :display "block"
+                    :height "100%"}} [:pre (with-out-str @state)]])))
 
 (defn mapbox []
   (let [mapb (r/atom nil)
@@ -177,21 +217,14 @@
    [mapbox]
    [infobox]
    [display-history]
+   ;[show-state]
    ;[display-domains]
    ])
 
-(defn init! [call response]
+(defn init! []
   (let [node (.. js/document (createElement "div"))
-        el (.. js/document -body (appendChild node))
+        el (or (by-id "ext-map-div") (.. js/document -body (appendChild node)))
         div (set! (.-id el) "ext-map-div")]
-    (dispatch-sync [:initialise-db call response])
-    (dispatch [:get-counts])
-    (dispatch [:get-locations])
-    (dispatch [:get-my-location])
-    (dispatch [:get-location-counts])
-    (dispatch [:get-history])
-    (dispatch [:get-site-info "wired.com"])
-    (dispatch [:track-mouse])
+    (dispatch-sync [:initialise-db])
+    (set! js/mapboxgl.accessToken "pk.eyJ1IjoiamFjb2JtYnIiLCJhIjoiY2lvMHl6d2ZqMTl5N3U2bHkxZ3h4NXRlNCJ9.gakQNsRrGKwvW-FkTAHcZQ")
   	(r/render [root] (by-id "ext-map-div"))))
-
-

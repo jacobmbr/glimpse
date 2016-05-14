@@ -98,7 +98,7 @@
                                               :value value
                                    :data %})))))
 
-(defn get-all-for-domain [res-chan domain]
+(defn get-all-for-domain [res-chan domain typ]
   (let [req (.. (idx/get-tx-store @db store-name)
                 (index "domainIndex")
                 (openCursor (.. js/IDBKeyRange (only domain)) "next"))]
@@ -106,6 +106,7 @@
         (.-onsuccess req)
         (idx/make-rec-acc-fn [] req
                              #(put! res-chan {:restype "all-for-domain"
+                                   :typ typ
                                    :data %})))))
 
 (defn get-distinct-index [idx kw callback]

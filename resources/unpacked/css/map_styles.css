@@ -14,3 +14,7 @@ a {
   font-weight: 200;
   text-decoration: none;
 }
+#ext-map-div {
+  height: 100%;
+  width: 100%;
+}

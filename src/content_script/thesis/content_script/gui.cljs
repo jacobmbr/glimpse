@@ -1,5 +1,6 @@
 (ns thesis.content-script.gui
   (:require-macros [reagent.ratom :refer [reaction]]
+                   [cljs.core.async.macros :refer [go-loop go]]
                    [hiccups.core :as hiccups :refer [html]])
   (:require [reagent.core :as r]
             [re-frame.core :refer [dispatch dispatch-sync subscribe]]
@@ -7,6 +8,7 @@
             [chromex.logging :refer-macros [log]]
             [domina.events :as evt]
             [domina.css :refer [sel]]
+            [cljs.core.async :refer [<! >! chan timeout put!]]
             [thesis.content-script.subs]
             [thesis.content-script.handlers]
             [domina.core :refer [by-id value set-value! destroy! append! by-class]]))
@@ -20,69 +22,112 @@
 
 
 (defn heading []
-  (let [tabId (subscribe [:tab-id])]
-    (fn [] [:div {:style {:width "100%"
+  (let [tabId (subscribe [:tab-url])]
+    (fn [] [:div {:style {:width "30%"
                           :text-align "left"
-                          :padding-left "40px"
+                          :margin-left "40px"
                           :position "absolute"
                           :top "20px"}}
             [:h1 {:style {:font-size "34px"
                           :text-decoration "underline"
                           :font-style "italic"
-                          :font-weight "200"
-                          :color "white"}} "Third parties who see you on " @tabId]])))
-(defn satellite [dom]
+                          :line-height "normal"
+                          :font-weight "600"
+                          :padding-bottom "10px"
+                          :color "white"}} "Third parties who see you on " @tabId]
+            [:p {:style {:line-height "15px" :font-style "italic"}} "and how often they have seen you on the internet before"]])))
+
+(defn counter [cnt del]
+  (let [text (str " ...has seen you " cnt " times before.")
+        draw-string (r/atom "")
+        ldel (int del)]
+    (r/create-class
+      {:component-did-mount
+       (fn [this]
+         (js/setTimeout
+           #(go-loop [i 0]
+            (<! (timeout 10))
+            (reset! draw-string (subs text 0 i))
+            (if (< i (count text)) (recur (inc i)))) (* 200 ldel)))
+       :reagent-render
+       (fn [cnt del]
+         [:span {:style {:color "#eee"
+                                    :font-weight "400"
+                                    :transition "all 0.3s ease"}} @draw-string])})))
+
+(defn satellite [dom del]
   (let [el (subscribe [:in-data dom])
         text (name dom)
         x (r/cursor el [:x])
         y (r/cursor el [:y])
-        cnt (r/cursor el [:count])
+        cnt (r/cursor el [:cnt])
         cspring (anim/spring cnt)
         fs (reaction (get @el :font-size))
         xsp (anim/spring x {:damping 2})
         ysp (anim/spring y {:damping 2})
         hasinfo? (subscribe [:has-info?])
+        lp (subscribe [:left-padding])
+        lpsp (anim/spring lp {:mass 20 :damping 2})
         show-text? (subscribe [:show-text?])
+        align? (subscribe [:align?])
+        dim (subscribe [:dim])
+        ww (reaction (first @dim))
+        offset (reaction (* @lpsp @ww))
         fssp (anim/interpolate-to fs)]
     (r/create-class
       {:component-will-unmount
        #()
        :display-name "satellite"
        :reagent-render
-        (fn [i]
-          [:div {:style {:min-width "300px" 
-                         :position "relative" 
-                         :padding-bottom "10px"
-                         ;:left (str (+ 20 @xsp)) :top (str @ysp "px")
-                         :transform (str "translate(" (+ 20 @xsp) "px," @ysp "px)")
-                         }}
-           [:p {:class "ext-h1" 
-                 :style {:font-size (str @fssp "px")
-                         :color "white"
-                         :clear "right"
-                         ;:line-height (str @fssp "px")
-                         ;:font-weight "400"
-                         ;:background-color "black"
-                         ;:text-decoration (if @hasinfo? "underline" "none")
-                         ;:transform (str "translate(" @xsp "px," @ysp "px)")
-                         }} 
-            text]
-            (if @show-text? [:span {:style {:color "#eee"
-                            :opacity (str (if @show-text? "1" "0"))}} 
-             "… saw you " @cnt " other times."])
-           ])})))
+        (fn [i del]
+          [:div {:class "satellite"}
+            [:div {:style {:min-width "300px" 
+                           :position (if @align? "relative" "absolute")
+                           :margin "10px 0 0 0"
+                           :padding-bottom "7px"
+                           ;:padding-left (str (* 100 @lpsp) "%")
+                           ;:left (str (+ 20 @xsp)) :top (str @ysp "px")
+                           ;:transform (str "translate(" (+ 20 (* @lpsp @ww) @xsp) "px," @ysp "px)")
+                           :transform (str "translate(" (+ 20 @offset @xsp) "px," @ysp "px)")
+                           }}
+             [:a {:href "#"
+                  :on-click #(dispatch [:handle-click "domain" text])
+                  :class "ext-h1" 
+                   :style {:font-size (str @fssp "px")
+                           :color "white"
+                           ;:line-height (str @fssp "px")
+                           :font-weight "600"
+                           :line-height "normal"
+                           :display "block"
+                           ;:background-color "black"
+                           ;:text-decoration (if @hasinfo? "underline" "none")
+                           ;:transform (str "translate(" @xsp "px," @ysp "px)")
+                           }} 
+              text]
+              (if @show-text? [counter @cnt del])
+             ]])})))
 
 (defn satellites []
   (let [data (subscribe [:data])
+        ;sorted-data (reaction (sort-by #(do (log %) (get % :count)) < @data))
+        sdata (reaction (into (sorted-map-by (fn [k1 k2] (compare [(get-in @data [k2 :cnt]) k2] [(get-in @data [k1 :cnt]) k1]))) @data))
+        show-text? (subscribe [:show-text?])
+        lp (subscribe [:left-padding])
+        lpsp (anim/spring lp {:mass 20 :damping 2})
         align? (subscribe [:align?])]
     [:div {:style {:position "fixed" 
-                   :left (if @align? "50%" "0")
-                   :top (if @align? "20%" "0")
+                   ;:left (if @align? "50%" "0")
+                   :top "0"
+                   ;:top (if @align? "20%" "0")
                    :transition "all 0.5s cubicInOUt"
-                   ;:height "70%"
-                   :overflow (if @align? "scroll" "visible" )}}
-     (for [dom (keys @data)]
-       ^{:key dom} [satellite dom])]))
+                   :padding-top (str (* 40 @lpsp) "%")
+                   :padding-bottom "300px"
+                   :padding-left "0"
+                   :height "100%"
+                   :width "100%"
+                   :overflow (if @show-text? "scroll" "visible" )}}
+     (map-indexed #(do ^{:key %2} [satellite %2 %1]) (keys @sdata))]))
+
 
 (defn debug []
   (let [data (subscribe [:data])]
@@ -90,9 +135,10 @@
 
 (defn screenshot []
   (let [tilt (r/atom 0)
+        tabUrl (subscribe [:tab-url])
         rotation (anim/spring tilt)
         scale-sub (subscribe [:img-scale])
-        scale (anim/spring scale-sub {:mass 20 :damping 2})
+        scale (anim/spring scale-sub {:mass 40 :damping 2})
         img-pos (subscribe [:img-pos])
         img-data (subscribe [:img-data])
         align? (subscribe [:align?])
@@ -107,14 +153,16 @@
     (fn a-screenshot []
       [:div 
        ;[anim/timeout #(reset! tilt 45) 100]
-       [:img {:on-click #(dispatch [:exit])
+       [:a {:href "#"
+            :on-click #(dispatch [:handle-click "site" tabUrl])}
+        [:img {:on-click #(dispatch [:exit])
               :src @img-data
               :id "ext-screenshot"
               :style {:margin "0 auto"
                       :width "100%"
                       :transform (str 
                                    "scale(" @scale "," @scale ") "
-                                   (if @align? (str "translate(" @xsp "px," @ysp "px)")))}}]])))
+                                   (if @align? (str "translate(" @xsp "px," @ysp "px)")))}}]]])))
 
 (defn root []
   [:div
@@ -127,7 +175,7 @@
 (defn get-rand-between [v low up]
   (+ (rand (* up (- v (* low v)))) (* low v)))
 
-(defn init! [img tabdict tabId counts]
+(defn init! [img tabdict tabId counts core-chan]
   (if-not (by-id "ext-canvas-container")
     (let [node (.. js/document (createElement "div"))
           el (.. js/document -body (appendChild node))
@@ -143,15 +191,18 @@
                            :font-size 0.5
                            )) {} (vec tabdict))
             (reset! data))
-      (dispatch-sync [:initialise-db img dim @data tabId counts])
+      (dispatch-sync [:initialise-db img dim @data tabId counts core-chan])
       ;(dispatch [:get-counts])
 
       (.. js/window (addEventListener "resize" #(dispatch [:resize [(.-innerWidth js/window) (.-innerHeight js/window)]])))
 
-      (js/setTimeout #(dispatch [:scale-down-img] 100))
-      (js/setTimeout #(dispatch [:data-satellites]) 500)
+      (js/setTimeout #(dispatch [:scale-down-img] 0))
+      (js/setTimeout #(dispatch [:data-satellites]) 800)
       (js/setTimeout #(dispatch [:handle-info true]) 3000)
+      ;(js/setTimeout #(dispatch [:shuffle]) 5000)
+
       ;(js/setTimeout #(dispatch [:data-satellites]) 4000)
-      (js/setTimeout #(dispatch [:update-img-pos [(-> dim (first) (/ 2) (* -1)) (-> dim (peek) (/ 2) (* -1))]]) 3000)
+      ;(js/setTimeout #(dispatch [:update-img-pos [(-> dim (first) (/ 2) (* -1)) 0]]) 3000)
+      (js/setTimeout #(dispatch [:update-img-pos]) 3000)
 
       (r/render [root] (by-id "ext-canvas-container")))))

@@ -11,6 +11,7 @@
                  [cljs-ajax "0.5.4"]
                  [reagent "0.6.0-alpha"]
                  [re-frame "0.7.0"]
+                 [binaryage/dirac "0.3.0"]
                  [binaryage/devtools "0.6.1"]
                  [timothypratley/reanimated "0.1.4"]
                  [environ "1.0.2"]]
@@ -21,7 +22,8 @@
             [lein-environ "1.0.2"]
             [lein-cooper "1.2.2"]]
 
-  :prep-tasks ["javac" "compile" "shell" "echo" "huhu"]
+  ;:prep-tasks ["javac" "compile" "shell" "echo"]
+
   :source-paths ["src/background"
                  "src/content_script"
                  "src/dev"
@@ -103,6 +105,13 @@
                        "figwheel" ["lein" "fig"]
                        "browser"  ["scripts/launch-test-browser.sh"]}}
 
+             :repla
+             {:repl-options {:port             8230
+                             :nrepl-middleware [dirac.nrepl/middleware]
+                             :init             (do
+                                                 (require 'dirac.agent)
+                                                 (dirac.agent/boot!))}}
+
              :release
              {:env       {:chromex-elide-verbose-logging "true"}
               :cljsbuild {:builds
@@ -111,6 +120,13 @@
                             :compiler     {:output-to     "resources/release/compiled/background.js"
                                            :output-dir    "resources/release/compiled/background"
                                            :asset-path    "compiled/background"
+                                           :optimizations :advanced
+                                           :elide-asserts true}}
+                           :map
+                           {:source-paths ["src/map"]
+                            :compiler     {:output-to     "resources/release/compiled/map.js"
+                                           :output-dir    "resources/release/compiled/map"
+                                           :asset-path    "compiled/map"
                                            :optimizations :advanced
                                            :elide-asserts true}}
                            :popup
@@ -137,6 +153,7 @@
             "devel"     ["with-profile" "+dev-mode" "do"                                                                      ; for mac only
                          "shell" "scripts/ensure-checkouts.sh,"
                          "cooper"]
+            "repla"     ["with-profile" "+base,+repla,+checkouts" "repl"]
             "release"   ["with-profile" "+release"
                          "do" "clean,"
                          "cljsbuild" "once" "background" "popup" "map" "content-script"]

@@ -8,7 +8,7 @@
 
 (register-sub :has-info?  (fn [db [_ _]] (reaction (get-in @db [:has-info?])))) 
 
-(register-sub :tab-id (fn [db [_ i]] (reaction (get-in @db [:tab-id]))))
+(register-sub :tab-url (fn [db [_ i]] (reaction (get-in @db [:tab-url]))))
 
 (register-sub :in-data (fn [db [_ i]] (reaction (get-in @db [:data i]))))
 
@@ -22,3 +22,4 @@
 (register-sub :show-text? (fn [db _] (reaction (get @db :show-text?))))
 (register-sub :align? (fn [db _] (reaction (get @db :align?))))
 (register-sub :dim (fn [db _] (reaction (get @db :dim))))
+(register-sub :left-padding (fn [db _] (reaction (get @db :left-padding))))
