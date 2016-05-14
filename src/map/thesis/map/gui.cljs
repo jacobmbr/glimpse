@@ -58,7 +58,7 @@
                        :position "absolute"
                        :left "30px"}}
          [:div {:class "history-div" :style {:margin "50px 0 50px 0" }}
-          (gs/unescapeEntities"&#8212;&#8212;&#8212;&nbsp;") [:a {:href "#" :on-click #(dispatch [:show-state true])} [:span {:style {:text-decoration "underline"
+          (gs/unescapeEntities"&#8212;&#8212;&#8212;&nbsp;") [:a {:href "#" :on-click #(dispatch [:show-domain "adzerk.net"])} [:span {:style {:text-decoration "underline"
                                                                              :font-size "25px"}} "Your History"]]]
 
          (doall (map-indexed #(do
@@ -100,10 +100,11 @@
            [:div 
             [:h1 "Who saw you on " @domain]
              [:h2 (count @info) " third parties saw you on domain " @domain "."]
-             [:span (for [x @info] ^{:key x} [:p 
-                                                   (str (get x "domain"))
+             [:span (for [x @domain-info] ^{:key x} [:pre 
+                                                   (str (get x "tabUrl"))
                                     ])]
-           [:h1 "loading..."]]))))
+           ]
+           [:h1 "loading..."]))))
 
 (defn site-infobox []
   (let [entry (subscribe [:site-info])
@@ -111,8 +112,7 @@
         domain (reaction (get @entry :domain))
         loading? (subscribe [:loading-site-info?])]
     (fn []
-      ;(log "loading site info? " @loading?)
-      ;(log "current entry" @entry " and loading? " @loading?)
+      (log @domain @site-info @loading?)
        (if-not @loading? 
          [:div 
           [:h1 "Who saw you on " @domain]
@@ -140,9 +140,8 @@
                          :padding "40px 0 0 0"
                          :transition "all 0.5s ease"
                          :background-color "rgba(100,100,100, 0.5)"}}
-           (if (= @view-mode "site")
              [domain-infobox]
-             [site-infobox])
+             [site-infobox]
 
              @view-mode]
           )])))

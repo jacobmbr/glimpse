@@ -82,6 +82,7 @@
               (contains? (get @tabdict tab-id) domain))
       (do
        (swap! tabdict update-in [tab-id] #(set (conj (into [] %) domain)))
+       (log "storing " domain " on " tabUrl)
        (store-request! r domain loc tabUrl)))))
 
 (defn get-domain-count [domain cb]

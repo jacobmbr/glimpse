@@ -21,6 +21,7 @@
 (def clients (atom []))
 (def location (atom nil))
 (def initialise-tab (atom nil))
+(def tabs (atom #{}))
 (declare tell-client-about-click!)
 (declare message-to-client)
 
@@ -35,7 +36,7 @@
 (defn add-client! [client]
   ;(log "BACKGROUND: client connected" (get-sender client))
   (t-storage/tabdict-add-client (.. (get-sender client) -tab -id))
-  (remove-client-by-id! (.. (get-sender client) -tab -id))
+  ;(remove-client-by-id! (.. (get-sender client) -tab -id))
   (swap! clients conj client)
   (log "Clients: " @clients))
 
@@ -63,6 +64,7 @@
           "get-location-counts" (t-storage/get-location-counts res-chan)
           "site-info" (t-storage/get-site-info res-chan (oget message "req"))
           "all-for-domain" (do (t-storage/get-all-for-domain res-chan (oget message "req") (oget message "typ")))
+          "close-chan" (close! res-chan)
           "open-tab" (let [target-url (oget message "domain")
                            typ (oget message "typ")]
                        (.. (oget js/chrome "tabs") (create #js {"url" (.. (oget js/chrome "extension") (getURL "map.html"))} #(reset! initialise-tab {:typ typ :url target-url}))))
@@ -83,7 +85,8 @@
   (message-to-client (oget (get-sender client) "tab" "id") #js {"restype" "ACK" "init-url" (get @initialise-tab :url) "typ" (get @initialise-tab :typ)})
   (run-client-message-loop! client))
 
-(defn tell-clients-about-new-tab! []
+(defn tell-clients-about-new-tab! [tab]
+  (log tab)
   (doseq [client @clients]
     ;(post-message! client "a new tab was created")
     ))
@@ -99,16 +102,30 @@
                         #js {"quality" 50}
                         #(message-to-client id (clj->js {:type "init" :id id :img % :tabdict (t-storage/get-tabdict id) :url url})))))
 
-(defn tell-client-about-request! [r]
-  (let [tabId (oget r "tabId")]
-    (.. (oget js/chrome "tabs") 
-      (get tabId
-         #(let [url (oget % "url")]
-            (if-not (or 
-                      (= (subs url 0 19) "chrome-extension://")
-                      (= (subs url 0 9) "chrome://"))
-              (message-to-client tabId (clj->js {:type "new-request" :tabdict (t-storage/get-tabdict tabId)}))))))))
+(defn tell-client-about-request! [tabId tabUrl r]
+  (message-to-client tabId (clj->js {:type "new-request" :tabdict (t-storage/get-tabdict tabId)})))
 
+(defn handle-request [request]
+  (let [req (first request)
+        url (oget req "url")
+        tabId (oget req "tabId")]
+    (if (contains? @tabs tabId)
+      (.. 
+        (oget js/chrome "tabs") 
+        (get tabId #(do
+                      (let [tabUrl (oget % "url")]
+                        (if-not (or 
+                                  (= (subs tabUrl 0 19) "chrome-extension://")
+                                  (= (subs tabUrl 0 9) "chrome://"))
+                          (do
+                            (tell-client-about-request! tabId tabUrl req)
+                            (process-request! req @location tabUrl))))))))))
+
+(defn handle-tab-closed [tabId]
+  (swap! tabs disj tabId))
+
+(defn handle-tab-created [tab]
+  (swap! tabs conj (oget tab "id")))
 ; -- main event loop --------------------------------------------------------------------------------------------------------
 
 (defn process-chrome-event [event-num event]
@@ -118,18 +135,15 @@
       ::browser-action/on-clicked (do
                                     (tell-client-about-click! (oget (first event-args) "id") "huhu.com")); TODO FIX
       ::storage/on-changed (.. (oget js/chrome "storage" "local") (get #(reset! location %)))
-      ::web-request/on-response-started (do 
-                                          (let [req (first event-args)
-                                              tabId (oget (first event-args) "tabId")]
-                                          (if-not (or (< tabId 0))
-                                            (.. (oget js/chrome "tabs") (get tabId #(do 
-                                              (tell-client-about-request! req)
-                                              (process-request! req @location (get % "url"))))))))
+      ::web-request/on-before-request (handle-request event-args)
       ::runtime/on-connect (apply handle-client-connection! event-args)
-      ;::tabs/on-removed (remove-client-by-id! (first event-args))
+      ::tabs/on-removed (handle-tab-closed (first event-args))
       ;::tabs/on-updated (if (= (oget (get event-args 1) "status") "loading")
                           ;(remove-client! (first event-args)))
-      ::tabs/on-created (tell-clients-about-new-tab!)
+      ::tabs/on-created (handle-tab-created (first event-args))
+      ::tabs/on-replaced (do (handle-tab-created #js {"id" (first event-args)}) 
+                             (handle-tab-closed (peek event-args)))
+      ;::tabs/on-updated (log (first event-args) (oget (peek event-args) "id"))
       nil)))
 
 (defn run-chrome-event-loop! [chrome-event-channel]

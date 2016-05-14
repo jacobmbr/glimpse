@@ -63,12 +63,15 @@
   (fn [db [_ res]]
     (let [test-set (r/atom (set []))]
       (assoc db :history (reduce (fn [p n] 
-                (let [url (string/replace (.. (Uri. (.-url n)) (getDomain)) "www." "")]
-                  (if (contains? @test-set url)
+                (let [url (.. (Uri. (.-url n)) (getDomain))
+                      clean-url (string/replace url "www." "")]
+                  (if (or
+                        (contains? @test-set clean-url)
+                        (not (re-find #"\." url)))
                     p
                     (do 
-                      (swap! test-set conj url)
-                      (conj p url))))) [] res)))))
+                      (swap! test-set conj clean-url)
+                      (conj p clean-url))))) [] res)))))
 
 (register-handler
   :get-domain-info
@@ -168,7 +171,9 @@
           (dispatch [:track-mouse])
          {:port (connect-to-background-page!)
           :initted true})
-       (assoc db :port (connect-to-background-page!)))))
+       (do 
+         (post! db {:reqtype "close-chan"})
+         (assoc db :port (connect-to-background-page!))))))
 
 (register-handler
   :handle-mouse
@@ -202,7 +207,7 @@
 (register-handler
   :show-site-info
   (fn [db [_ domain]]
-    (dispatch [:get-domain-info domain])
+    (dispatch [:get-site-info domain])
     (assoc db :view-mode "site"
               :display-info-box? true
               :loading-site-info? true)))
