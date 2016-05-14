@@ -12,7 +12,6 @@
             [re-frame.core :refer [register-handler path trim-v after debug dispatch]]))
 
 (def call-chan (atom nil))
-(def response-chan (atom nil))
 
 (defn post! [db msg]
   (post-message! (get db :port) (clj->js msg)))
@@ -20,7 +19,7 @@
 (defn listen! [res-chan]
   (go-loop []
     (when-let [msg (<! res-chan)]
-      ;(log "received message from background: " msg)
+      (log "BG msg: " msg)
       (condp = (.-restype msg)
         "ACK" (let [init-url (oget msg "init-url")
                     init-typ (oget msg "typ")]
@@ -87,7 +86,7 @@
 (register-handler
   :handle-site-info
   (fn [db [_ res]]
-    ;(log "received site info: " res)
+    (log "received site info: " res)
     (assoc db :site-info res
               :loading-site-info? false)))
 
@@ -161,7 +160,6 @@
    (fn [db [_ c r]]                   ;; Ignore both params (db and v). 
      (if-not (get db :initted)
        (do 
-         (reset! response-chan r)
           (dispatch [:get-counts])
           (dispatch [:get-locations])
           (dispatch [:get-my-location])
@@ -170,7 +168,7 @@
           (dispatch [:track-mouse])
          {:port (connect-to-background-page!)
           :initted true})
-       db)))
+       (assoc db :port (connect-to-background-page!)))))
 
 (register-handler
   :handle-mouse

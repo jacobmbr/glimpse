@@ -26,18 +26,18 @@
 
 ; -- clients manipulation ---------------------------------------------------------------------------------------------------
 
+(defn remove-client-by-id! [tabId]
+  (log "kicking out " tabId)
+  (t-storage/tabdict-remove-client tabId)
+  (let [remove-item (fn [coll item] (remove #(= (oget (get-sender %) "tab" "id") tabId) coll))]
+    (swap! clients remove-item tabId)))
+
 (defn add-client! [client]
   ;(log "BACKGROUND: client connected" (get-sender client))
-  ;(log "Clients: " @clients)
   (t-storage/tabdict-add-client (.. (get-sender client) -tab -id))
-  (swap! clients conj client))
-
-(defn remove-client-by-id! [client]
-  (let [tabId (oget (get-sender client) "tab" "id")]
-    (log "kicking out " tabId)
-    (t-storage/tabdict-remove-client tabId)
-    (let [remove-item (fn [coll item] (remove #(= (oget (get-sender %) "tab" "id") tabId) coll))]
-      (swap! clients remove-item tabId))))
+  (remove-client-by-id! (.. (get-sender client) -tab -id))
+  (swap! clients conj client)
+  (log "Clients: " @clients))
 
 (defn remove-client! [client]
   (log "BACKGROUND: client disconnected" (get-sender client))
