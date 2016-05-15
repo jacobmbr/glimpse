@@ -58,7 +58,7 @@
                        :position "absolute"
                        :left "30px"}}
          [:div {:class "history-div" :style {:margin "50px 0 50px 0" }}
-          (gs/unescapeEntities"&#8212;&#8212;&#8212;&nbsp;") [:a {:href "#" :on-click #(dispatch [:show-domain "adzerk.net"])} [:span {:style {:text-decoration "underline"
+          (gs/unescapeEntities"&#8212;&#8212;&#8212;&nbsp;") [:a {:href "" :on-click #(dispatch [:show-domain-info "adzerk.net"])} [:span {:style {:text-decoration "underline"
                                                                              :font-size "25px"}} "Your History"]]]
 
          (doall (map-indexed #(do
@@ -99,10 +99,10 @@
          (if-not @loading? 
            [:div 
             [:h1 "Who saw you on " @domain]
-             [:h2 (count @info) " third parties saw you on domain " @domain "."]
-             [:span (for [x @info] ^{:key x} [:pre 
-                                                   (str (get x "tabUrl"))
-                                    ])]
+             [:h2 (count @info) " third parties saw you on the domain " @domain "."]
+             [:span (for [x @info]
+                      (let [url (get x "tabUrl")]
+                        ^{:key x} [:a {:on-click #(dispatch [:show-site-info url])} (str url)]))]
            ]
            [:h1 "loading..."]))))
 
@@ -112,26 +112,23 @@
         domain (reaction (get @entry :domain))
         loading? (subscribe [:loading-site-info?])]
     (fn []
-      ;(log @domain @site-info @loading?)
        (if-not @loading? 
          [:div 
           [:h1 "Who saw you on " @domain]
-           [:h2 (count @site-info) " third parties saw you on site " @domain "."]
-           [:span (for [x @site-info] ^{:key x} [:p 
-                                                 (str (get x "domain"))
-                                  ])]
+           [:h2 (count @site-info) " third parties saw you on this site " @domain "."]
+           [:span (for [x @site-info] 
+                    (let [dom (get x "domain")]
+                      ^{:key x} [:a {:href "#" :on-click #(dispatch [:show-domain-info dom])} (str dom)]))]
          ]
          [:h1 "loading..."]))))
 
 (defn infobox []
-  (let [view-mode (subscribe [:view-mode])
-        display? (subscribe [:display-info-box?])]
+  (let [view-mode (subscribe [:view-mode])]
     (fn []
       ;(log "render: "  @view-mode)
-      [:div    [site-infobox]
+      [:div [site-infobox]
           [site-infobox]
-      (if @display?
-          [:div {:on-click #(dispatch [:display-info-box false])
+          [:div {:on-click #(log "clicked infobox")
                  :style {:width "70%"
                          :height "100%"
                          :position "absolute"
@@ -140,12 +137,12 @@
                          :padding "40px 0 0 0"
                          :transition "all 0.5s ease"
                          :background-color "rgba(100,100,100, 0.5)"}}
-             [domain-infobox]
-             [site-infobox]
+             (if (= "domain" @view-mode) [domain-infobox])
+             (if (= "site" @view-mode) [site-infobox])
 
              @view-mode]
           [:h1 "Loading"]
-          )])))
+          ])))
 
 
 (defn show-state []
@@ -213,13 +210,15 @@
           [:div {:style {:height "100%" :width "100%" :background-color "rgba(100,100,100,0)" :display "none"}}]])})))
 
 (defn root []
-  [:div
-   [mapbox]
-   [infobox]
-   [display-history]
-   ;[show-state]
-   ;[display-domains]
-   ])
+  (let [display? (subscribe [:display-info-box?])]
+    (fn []
+      [:div
+       [mapbox]
+       (if @display? [infobox])
+       [display-history]
+       ;[show-state]
+       ;[display-domains]
+       ])))
 
 (defn init! []
   (let [node (.. js/document (createElement "div"))

@@ -34,7 +34,7 @@
                                data (get res "data")]
                            (condp = typ
                              "site" (dispatch [:handle-site-info data typ])
-                             "domain" (dispatch [:handle-domain-info data (oget res "domain")])))
+                             "domain" (dispatch [:handle-domain-info data (oget msg "domain")])))
         "all-for-site" (dispatch [:handle-site-info (js->clj (.-data msg))])
         "all-for-tabUrlIndex" (dispatch [:handle-site-info 
                                          {:data (js->clj (.-data msg))
@@ -81,10 +81,11 @@
 
 (register-handler
   :handle-domain-info
+  debug
   (fn [db [_ res domain]]
     (assoc db :domain-info {:domain domain
                             :data res}
-              :loading-domain-info? false)))
+                            :loading-domain-info? false)))
 
 (register-handler
   :handle-site-info
