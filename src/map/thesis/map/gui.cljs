@@ -175,19 +175,25 @@
                     :height "100%"}} [:pre (with-out-str @state)]])))
 
 (defn mapbox []
-  (let [mapb (r/atom nil)
+  (let [mapb (subscribe [:map])
         geojson (subscribe [:geojson])
+        layers (reaction )
         geoloading? (subscribe [:loading-location-counts?])
         loc (subscribe [:my-location])]
     (r/create-class
       {:display-name "MapBox Component"
+       :component-did-update
+       #(do 
+          (log "update mapbox")
+          (dispatch [:set-marker-clusters]))
        :component-did-mount
        (fn [this]
-         (log @geojson)
-         (reset! mapb
-                 (.. (oget js/L "mapbox") (map "map") (setView (array 40.73 -74.011) 13) (addLayer (js/L.mapbox.styleLayer "mapbox://styles/mapbox/dark-v8"))))
+         (dispatch-sync [:set-map "map"])
+         ;(reset! mapb
+                 ;(.. (oget js/L "mapbox") (map "map") (setView (array 40.73 -74.011) 13) (addLayer (js/L.mapbox.styleLayer "mapbox://styles/mapbox/dark-v8"))))
+
          ;(.. js/L.mapbox (featureLayer @geojson) (on "ready" (fn [e] (do (log "hual") (.. (oget e "target") (eachLayer #(log "huhu" %)))))) (addTo @mapb))
-         (js/setTimeout #(.. @mapb (addLayer (.. (L.MarkerClusterGroup.) (addLayer (.. js/L (geoJson @geojson)))))) 300)
+         ;(js/setTimeout #(.. @mapb (addLayer (.. (L.MarkerClusterGroup.) (addLayer (.. js/L (geoJson @geojson)))))) 300)
          ;(.. js/L.mapbox (featureLayer @geojson) (on "ready" (fn [e] (.. js/console (log "HUAHD"))) ))
                  ;(js/mapboxgl.Map.
                    ;(clj->js {:container "map"

@@ -4,22 +4,9 @@
             [clojure.string :refer [split]]
             [chromex.logging :refer-macros [log]]))
 
-(register-sub
-  :geojson
-  (fn [db _]
-    (reaction 
-      (clj->js {:type "FeatureCollection"
-                :features (reduce #(conj %1 (let [strs (split (first %2) #"\|")]
-                                              {:type "Feature"
-                                               :properties {:title (peek %2)
-                                                            :marker-symbol "airport"}
-                                               :geometry {:type "Point"
-                                                          :coordinates #js [(subs (get strs 1) 0 7) (subs (first strs) 0 7)]}})) [] (get @db :location-counts))}))))
+(register-sub :geojson (fn [db _] (reaction (get @db :geojson))))
 
 (register-sub :display-info-box?  (fn [db _] (reaction (get @db :display-info-box?))))
-
-;(register-sub :current-site-info (fn [db _] (reaction (get @db :current-site-info))))
-
 
 (register-sub :dim (fn [db _] (reaction (get @db :window))))
 
@@ -44,3 +31,5 @@
 (register-sub :state (fn [db _] (reaction @db)))
 (register-sub :show-state? (fn [db _] (reaction (get @db :show-state))))
 (register-sub :site-counts (fn [db _] (reaction (get @db :site-counts))))
+(register-sub :map (fn [db _] (reaction (get @db :map))))
+

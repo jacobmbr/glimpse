@@ -1,8 +1,11 @@
 (ns thesis.map.handlers
   (:import goog.Uri)
-  (:require-macros [cljs.core.async.macros :refer [go-loop go]])
+  (:require-macros [cljs.core.async.macros :refer [go-loop go]]
+                   [hiccups.core :as hiccups :refer [html]])
   (:require [reagent.core :as r]
             [chromex.ext.storage :as storage]
+            [hiccups.runtime :as hiccupsrt]
+            [clojure.string :refer [split]]
             [clojure.string :as string]
             [chromex.support :refer-macros [oget]]
             [chromex.logging :refer-macros [log]]
@@ -137,6 +140,7 @@
 (register-handler
   :handle-location-counts
   (fn [db [_ res]]
+    (dispatch [:make-geojson])
     (assoc db :location-counts res :loading-location-counts? false)))
 
 (register-handler
@@ -186,9 +190,56 @@
          (assoc db :port (connect-to-background-page!))))))
 
 (register-handler
+  :set-map
+  debug
+  (fn [db [_ id]]
+    (assoc db :map (.. (oget js/L "mapbox") (map "map") (setView (array 40.73 -74.011) 13) (addLayer (js/L.mapbox.styleLayer "mapbox://styles/mapbox/dark-v8"))))))
+
+(register-handler
   :handle-mouse
   (fn [db [_ m]]
     (assoc db :mouse m)))
+
+(register-handler
+  :make-geojson
+  (fn [db [_ _]]
+   (assoc db
+          :geojson
+          (clj->js {:type "FeatureCollection"
+              :features (reduce #(conj %1 (let [strs (split (first %2) #"\|")]
+                                            {:type "Feature"
+                                             :properties {:title (peek %2)
+                                                          :marker-symbol "airport"}
+                                             :geometry {:type "Point"
+                                                        :coordinates #js [(subs (get strs 1) 0 7) (subs (first strs) 0 7)]}})) [] (get db :location-counts))}))))
+(defn make-marker-html [text]
+  (do
+    (log text)
+    (html [:div.cluster {:style "background-color: rgba(255,255,255,0.4);
+                               width: 100px;
+                               height: 100px;
+                               border-radius: 50px;"} 
+         [:span {:style "font-size: 20px;
+                         display: block;
+                         transform: translate(200px,0) scale(2,2);
+                         background-color: transparent;
+                         margin: 0 auto;"} "Moin"]])))
+
+(register-handler
+  :set-marker-clusters
+  debug
+  (fn [db [_ _]]
+    (let [mapb (get db :map)
+          geojson (get db :geojson)]
+      (.. mapb (eachLayer #(log %)))
+      (.. mapb 
+          (addLayer 
+            (.. (L.MarkerClusterGroup. #js {"showCoverageOnHover" "false" 
+                                            "singleMarkerMode" "true"
+                                            "iconCreateFunction" #(js/L.divIcon #js {"html" (make-marker-html (.getAllChildMarkers %))})})
+                                                                                                                  ;(log (.getAllChildMarkers %)))
+                (addLayer (.. js/L (geoJson geojson))))))
+      (assoc db :added-markers? true))))
 
 (register-handler :show-state (fn [db [_ v]] (assoc db :show-state v)))
 
@@ -202,6 +253,7 @@
   :handle-window
   (fn [db _]
     (assoc db :window [(.. js/window -innerWidth) (.. js/window -innerHeight)])))
+
 (register-handler
   :track-mouse
   (fn [db _]
