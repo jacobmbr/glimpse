@@ -16,3 +16,8 @@ a {
   height: 100%;
   width: 100%;
 }
+
+.leaflet-marker-icon {
+  background-color: transparent;
+  border: 0;
+}
