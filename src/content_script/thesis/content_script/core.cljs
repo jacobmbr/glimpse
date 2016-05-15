@@ -37,8 +37,8 @@
                (gui/init! img tabdict (.-url msg) @counts core-chan)
                (run-gui-loop! core-chan)))
     "new-request" (do 
-                    (log "new r")
-                    (post-message! @background-chan (clj->js {:reqtype "get-counts"}))
+                    ;(log "new r")
+                    ;(post-message! @background-chan (clj->js {:reqtype "get-counts"}))
                     (indicator/add-domain (.-tabdict msg)))
     "domains-info" (dispatch [:update-domain-info (.-res msg)])
     (if (= (.-restype msg) "distinct-domains") 

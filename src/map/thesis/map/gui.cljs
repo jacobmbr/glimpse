@@ -27,42 +27,58 @@
        #()
        :display-name "history-item"
        :reagent-render
-       (fn []
+       (fn [text cnt]
             [:div {:class "history-div"
                    :style {
                       :font-weight "200"
-                      :margin-bottom "20px"
-                      ;:transform (str "scale(" @delta "," @delta ")")
-                      ;:position "absolute"
-                      ;:transform (str "translate(" (* 50 (+ 1 %1)) "px,100px)")
-                      }} (gs/unescapeEntities"&#8212;&#8212;&#8212;&nbsp;") 
-             [:span {:on-click #(dispatch [:show-site-info text])
-                     :style {:font-size (str (- 30 (count text)) "px")}} (- 30 (count text)) " " text ]])})))
+                      :display "flex"
+                      }} 
+               [:div {:style {:flex "0 1 20%"}} [:div {:style {:text-align "right"
+                                                               :padding-right "10px"
+                                                               :padding-bottom "15px"
+                                                               :font-size (str (+ 14 (min 12 (/ cnt 10))) "px")
+                                                               }} cnt]]
+               [:div {:on-click #(dispatch [:show-site-info text])
+                       :style {:flex "0 1 80%"
+                               :border-left "1px solid white"
+                               :font-size (str (+ 14 (min 12 (/ cnt 10))) "px")}}
+                [:span {:style {:margin-left "10px"
+                                :color (if (nil? cnt) "rgba(255,255,255,0.3)" "rgba(255,255,255,1)")
+                                }} text]]])})))
 
-(defn display-history []
+(defn history []
   (let [history (subscribe [:history])
-        cnts (subscribe [:distinct-domains])]
+        cnts (subscribe [:site-counts])
+        has-counts? (reaction (not (nil? @cnts)))]
     (fn [this]
-      [:div {:style {:width "30%"
-                     :height "100%"
-                     :position "absolute"
-                     :left "0px"
-                     :top "0px"
-                     :overflow-y "hide"
-                     :background-color "rgba(100,100,100, 0.5)"}}
-        [:div {:style {:width "90%"
+      (log "histch" @cnts @has-counts?)
+      ;[:div {:style {:display "flex"
+                     ;:height "100%"
+                     ;:top "0px"
+                     ;:overflow-y "hide"
+                     ;:background-color "rgba(100,100,100, 0.5)"}}
+        ;[:div {:style {
+                       ;:flex "0 1 20%"
+                       ;:height "100%"}} "hu"]
+        ;[:div {:style {
+                       ;:flex "0 1 80%"
                        ;:min-width "1000px"
-                       :overflow "auto"
-                       :border-left "1px solid white"
-                       :height "100%"
-                       :position "absolute"
-                       :left "30px"}}
-         [:div {:class "history-div" :style {:margin "50px 0 50px 0" }}
-          (gs/unescapeEntities"&#8212;&#8212;&#8212;&nbsp;") [:a {:href "" :on-click #(dispatch [:show-domain-info "adzerk.net"])} [:span {:style {:text-decoration "underline"
-                                                                             :font-size "25px"}} "Your History"]]]
+                       ;:overflow "auto"
+                       ;:border-left "1px solid white"
+                       ;:height "100%"}}
+         ;[:div {:class "history-div" :style {:margin "50px 0 50px 0" }}
+          ;(gs/unescapeEntities"&#8212;&#8212;&#8212;&nbsp;") [:a {:href "" :on-click #(dispatch [:show-domain-info "adzerk.net"])} [:span {:style {:text-decoration "underline"
+                                                                             ;:font-size "25px"}} "Your History"]]]
 
-         (doall (map-indexed #(do
-                         ^{:key %2} [history-item %2]) @history))]])))
+         [:div {:style {:background-color "rgba(100,100,100, 0.5)"
+                        :max-height "100vh"
+                        :padding "60px 0 0 0"
+                        :overflow "auto"}} 
+          (if @has-counts? 
+            (doall (map-indexed #(do
+                         ^{:key %2} [history-item %2 (get @cnts %2)]) @history)))]
+         ;]]
+      )))
 
 (defn display-locations []
   (let [locations (subscribe [:distinct-locations])
@@ -83,7 +99,7 @@
                        :background "rgba(3, 201, 200,0.5)"}}
          [:div {:style {:padding "10px 10px 0 30px"}}
           [:h1 "Where you've been and who was there with you."]
-          (if-not @loading? [:div (for [x @domains] ^{:key x} [:span
+          (if-not @loading? [:div (for [x @domains] ^{:key x} [:p
                                                                [:a {:href "#"
                                                                    :on-click #(dispatch [:get-domain-info x])
                                                                    :style {:color "white" :font-size "15px"}} x] [:span " - "]])] [:p "loading"])]
@@ -102,7 +118,7 @@
              [:h2 (count @info) " third parties saw you on the domain " @domain "."]
              [:span (for [x @info]
                       (let [url (get x "tabUrl")]
-                        ^{:key x} [:a {:on-click #(dispatch [:show-site-info url])} (str url)]))]
+                        ^{:key x} [:p [:a {:on-click #(dispatch [:show-site-info url])} (str url)]]))]
            ]
            [:h1 "loading..."]))))
 
@@ -118,7 +134,7 @@
            [:h2 (count @site-info) " third parties saw you on this site " @domain "."]
            [:span (for [x @site-info] 
                     (let [dom (get x "domain")]
-                      ^{:key x} [:a {:href "#" :on-click #(dispatch [:show-domain-info dom])} (str dom)]))]
+                      ^{:key x} [:p [:a {:href "#" :on-click #(dispatch [:show-domain-info dom])} (str dom)]]))]
          ]
          [:h1 "loading..."]))))
 
@@ -126,22 +142,20 @@
   (let [view-mode (subscribe [:view-mode])]
     (fn []
       ;(log "render: "  @view-mode)
-      [:div [site-infobox]
-          [site-infobox]
+      [:div 
           [:div {:on-click #(log "clicked infobox")
-                 :style {:width "70%"
-                         :height "100%"
-                         :position "absolute"
-                         :left "30%"
+                 :style {
+                         ;:flex "1 1 30%"
+                         ;:height "100%"
+                         ;:left "30%"
                          :top "0px"
                          :padding "40px 0 0 0"
                          :transition "all 0.5s ease"
+                         :height "100vh"
                          :background-color "rgba(100,100,100, 0.5)"}}
              (if (= "domain" @view-mode) [domain-infobox])
              (if (= "site" @view-mode) [site-infobox])
-
-             @view-mode]
-          [:h1 "Loading"]
+             ]
           ])))
 
 
@@ -202,7 +216,7 @@
        (fn []
          @geojson
          [:div {:id "map"
-                     :style {:position "absolute"
+                     :style {:position "fixed"
                              :top "0px"
                              :left "0px"
                              :height "100%"
@@ -213,12 +227,24 @@
   (let [display? (subscribe [:display-info-box?])]
     (fn []
       [:div
-       [mapbox]
-       (if @display? [infobox])
-       [display-history]
-       ;[show-state]
-       ;[display-domains]
-       ])))
+        [:div {:style {:display "block"
+                       :z-index "-1000"
+                       :position "fixed"
+                       :top "0px"}} [mapbox]]
+
+        [:div {:style {:display "flex"
+                       :width "100%"
+                       :position "absolute"
+                       :top "0px"
+                       :left "0px"
+                       :flex-flow "row"}}
+          [:div {:style {:flex "0 1 30%"}} 
+           [history]]
+          [:div {:style {:flex "0 1 70%"}}
+            (if @display? [infobox])]
+           ;[show-state]
+           ;[display-domains]
+       ]])))
 
 (defn init! []
   (let [node (.. js/document (createElement "div"))

@@ -82,8 +82,9 @@
        :display-name "satellite"
        :reagent-render
         (fn [i del]
-          [:div {:class "satellite"}
-            [:div {:style {:min-width "300px" 
+          [:div 
+            [:div {:class "satellite"
+                   :style {:min-width "300px" 
                            :position (if @align? "relative" "absolute")
                            :margin "10px 0 0 0"
                            :padding-bottom "7px"
@@ -200,12 +201,12 @@
       (.. js/window (addEventListener "resize" #(dispatch [:resize [(.-innerWidth js/window) (.-innerHeight js/window)]])))
 
       (js/setTimeout #(dispatch [:scale-down-img] 0))
-      (js/setTimeout #(dispatch [:data-satellites]) 800)
-      (js/setTimeout #(dispatch [:handle-info true]) 3000)
+      (js/setTimeout #(dispatch [:data-satellites]) 500)
+      (js/setTimeout #(dispatch [:handle-info true]) 2000)
       ;(js/setTimeout #(dispatch [:shuffle]) 5000)
 
       ;(js/setTimeout #(dispatch [:data-satellites]) 4000)
       ;(js/setTimeout #(dispatch [:update-img-pos [(-> dim (first) (/ 2) (* -1)) 0]]) 3000)
-      (js/setTimeout #(dispatch [:update-img-pos]) 3000)
+      (js/setTimeout #(dispatch [:update-img-pos]) 2000)
 
       (r/render [root] (by-id "ext-canvas-container")))))

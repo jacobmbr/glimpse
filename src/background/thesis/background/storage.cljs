@@ -157,6 +157,11 @@
     #(put! res-chan {:restype "distinct-locations"
                      :data %})))
 
+(defn get-distinct-sites [res-chan]
+  (get-distinct-index-with-counts "tabUrlIndex" :tabUrl
+    #(put! res-chan {:restype "distinct-sites"
+                     :data %})))
+
 (defn get-distinct-domains [res-chan]
   (get-distinct-index-with-counts "domainIndex" :domain
     #(put! res-chan {:restype "distinct-domains"

@@ -27,11 +27,13 @@ h1.ext-h1 {
 	vertical-align: baseline;
   text-transform: none;
 }
-#ext-canvas-conatiner div.satellite {
+#ext-canvas-conatiner > div.satellite {
   transition: all 0.5s ease-out;
   transform-origin: left center;
 }
-#ext-canvas-container div.satellite:hover {
+#ext-canvas-container > div.satellite:hover {
+  transition: all 0.5s ease-out;
+  transform-origin: left center;
   transform: scale(1.1,1.1);
 }
 #ext-canvas-container a {

@@ -43,3 +43,4 @@
 (register-sub :view-mode (fn [db _] (reaction (get @db :view-mode))))
 (register-sub :state (fn [db _] (reaction @db)))
 (register-sub :show-state? (fn [db _] (reaction (get @db :show-state))))
+(register-sub :site-counts (fn [db _] (reaction (get @db :site-counts))))

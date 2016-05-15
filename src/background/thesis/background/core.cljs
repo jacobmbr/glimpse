@@ -14,6 +14,7 @@
             [chromex.ext.browser-action :as browser-action]
             [chromex.ext.storage :as storage]
             [chromex.ext.extension :as ext]
+            [dirac.runtime :as dirac]
             [thesis.background.storage :as t-storage :refer [process-request! setup-storage! get-and-store-psl! get-domain-count]]
             [thesis.background.location :as location]))
 
@@ -24,6 +25,8 @@
 (def tabs (atom #{}))
 (declare tell-client-about-click!)
 (declare message-to-client)
+(dirac/install!)
+
 
 ; -- clients manipulation ---------------------------------------------------------------------------------------------------
 
@@ -59,6 +62,7 @@
         (condp = (oget message "reqtype")
           "ind-clicked!" (tell-client-about-click! tabId domain)
           "get-counts" (t-storage/get-distinct-domains res-chan)
+          "get-site-counts" (t-storage/get-distinct-sites res-chan)
           "get-locations" (t-storage/get-distinct-locations res-chan)
           "get-location-counts" (t-storage/get-location-counts res-chan)
           "site-info" (t-storage/get-site-info res-chan (oget message "req"))

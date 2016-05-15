@@ -28,7 +28,8 @@
         "js/pt.js",
         "js/three.min.js",
         "js/tween.min.js",
-        "js/CSS3DRenderer.js",
+        //"js/CSS3DRenderer.js",
+        //"js/dexie.js",
         "compiled/content_script/thesis.js",
         "content-script.js"
       ],

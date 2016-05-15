@@ -4,12 +4,10 @@ h1 {font-weight: 400}
 .history-div {
   display: block;
   font-size: 13px;
-  /*position: absolute;*/
-  /*transform: rotate(-45deg);*/
-  /*transform-origin: bottom left;*/
   font-family "Helvetica Neue";
 }
 a {
+  color: white;
   font-size 13px;
   font-weight: 200;
   text-decoration: none;

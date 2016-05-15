@@ -26,6 +26,7 @@
                 (if-not (nil? init-url) 
                   (do 
                     (dispatch [:init-box init-typ init-url]))))
+        "distinct-sites" (dispatch [:handle-site-counts (js->clj (.-data msg))])
         "distinct-domains" (dispatch [:handle-counts (js->clj (.-data msg))])
         "distinct-locations" (dispatch [:handle-locations (js->clj (.-data msg))])
         "location-counts" (dispatch [:handle-location-counts (js->clj (.-data msg))])
@@ -146,13 +147,21 @@
     (assoc db :distinct-locations res :loading-locations? false)))
 
 (register-handler
+  :get-site-counts
+  (fn [db _] 
+    (post! db {:reqtype "get-site-counts"})
+    (assoc db :loading-site-counts? true)))
+
+(register-handler
+  :handle-site-counts
+  (fn [db [_ res]] 
+    (assoc db :site-counts res :loading-site-counts? false)))
+
+(register-handler
   :get-counts
   (fn [db _] 
-    (if (:has-loaded-domains? db)
-      (do 
-        (post! db {:reqtype "get-counts"})
-        (assoc db :loading-domains? true))
-      db)))
+    (post! db {:reqtype "get-counts"})
+    (assoc db :loading-domains? true)))
 
 (register-handler
   :handle-counts
@@ -169,6 +178,7 @@
           (dispatch [:get-my-location])
           (dispatch [:get-location-counts])
           (dispatch [:get-history])
+          (dispatch [:get-site-counts])
           (dispatch [:track-mouse])
          {:port (connect-to-background-page!)
           :initted true})
@@ -229,4 +239,3 @@
       (do (log "dispatching domain info") (dispatch [:show-domain-info url]))
       (do (log "dispatching site info") (dispatch [:show-site-info url])))
     db))
-
