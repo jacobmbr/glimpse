@@ -1,2 +1,0 @@
-;; Analyzed by ClojureScript 1.8.51
-{:name thesis.dev, :doc nil, :excludes #{}, :use-macros nil, :require-macros nil, :uses nil, :requires {devtools devtools.core, devtools.core devtools.core, dirac dirac.runtime, dirac.runtime dirac.runtime}, :imports nil}

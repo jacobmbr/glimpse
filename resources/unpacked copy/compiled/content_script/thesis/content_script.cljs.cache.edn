@@ -1,2 +1,0 @@
-;; Analyzed by ClojureScript 1.8.51
-{:name thesis.content-script, :doc nil, :excludes #{}, :use-macros nil, :require-macros nil, :uses nil, :requires {core thesis.content-script.core, thesis.content-script.core thesis.content-script.core}, :imports nil}

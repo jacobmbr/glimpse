@@ -1,1 +1,0 @@
-{"version":3,"file":"\/Users\/jacob\/Desktop\/thesis-cljs\/resources\/unpacked\/compiled\/map\/dirac\/project.js","sources":["project.cljs"],"lineCount":9,"mappings":";AAAA;;AAGA,AAAKA,gCAAgB;AAErB,oCAAA,pCAAMC;AAAN,AACED","names":["dirac.project\/current-version","dirac.project\/get-current-version"]}

@@ -1,2 +1,0 @@
-;; Analyzed by ClojureScript 1.8.51
-{:name thesis.popup, :doc nil, :excludes #{}, :use-macros nil, :require-macros nil, :uses nil, :requires {core thesis.popup.core, thesis.popup.core thesis.popup.core}, :imports nil}
