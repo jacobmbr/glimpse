@@ -7,6 +7,7 @@
             [cljs.core.async :refer [put! timeout]]
             [goog.string :as gs]
             [clojure.string :refer [split]]
+            [chromex.support :refer-macros [oget]]
             [thesis.content-script.animation :as anim]
             [chromex.logging :refer-macros [log]]
             [domina.events :as evt]
@@ -182,39 +183,45 @@
       {:display-name "MapBox Component"
        :component-did-mount
        (fn [this]
+         (log @geojson)
          (reset! mapb
-                 (js/mapboxgl.Map.
-                   (clj->js {:container "map"
-                             :zooom 9
-                             :center [-12.083851 37.386052]
-                             :style "mapbox://styles/mapbox/dark-v8"})))
-         (.on @mapb "load" (fn []
-                             (destroy! (by-class "mapboxgl-ctrl-attrib")) ;sorry!
-                             (.. @mapb (flyTo (clj->js
-                                            {:zoom 12
-                                             :center [(:lon @loc) (:lat @loc)]
-                                             :bearing 0
-                                             :speed 0.8})))
-                             (go-loop []
-                                (<! (timeout 200))
-                                (if @geoloading?
-                                  (do (recur))
-                                  (do (log "adding now")
-                                      (.. @mapb (addSource "markers" #js {"type" "geojson"
-                                                                          "data" @geojson}))
-                                      ;(log (str @geojson))
-                                      ;(.addLayer @mapb (.. js/L (markerClusterGroup) (addLayer (.. js/L (geoJson @geojson)))))
-                                      (.. @mapb (addLayer #js {"id" "markers"
-                                                           "type" "circle"
+                 (.. (oget js/L "mapbox") (map "map") (setView (array 40.73 -74.011) 13) (addLayer (js/L.mapbox.styleLayer "mapbox://styles/mapbox/dark-v8"))))
+         ;(.. js/L.mapbox (featureLayer @geojson) (on "ready" (fn [e] (do (log "hual") (.. (oget e "target") (eachLayer #(log "huhu" %)))))) (addTo @mapb))
+         (js/setTimeout #(.. @mapb (addLayer (.. (L.MarkerClusterGroup.) (addLayer (.. js/L (geoJson @geojson)))))) 300)
+         ;(.. js/L.mapbox (featureLayer @geojson) (on "ready" (fn [e] (.. js/console (log "HUAHD"))) ))
+                 ;(js/mapboxgl.Map.
+                   ;(clj->js {:container "map"
+                             ;:zooom 9
+                             ;:center [-12.083851 37.386052]
+                             ;:style "mapbox://styles/mapbox/dark-v8"})))
+         ;(.on @mapb "load" (fn []
+                             ;(destroy! (by-class "mapboxgl-ctrl-attrib")) ;sorry!
+                             ;(.. @mapb (flyTo (clj->js
+                                            ;{:zoom 12
+                                             ;:center [(:lon @loc) (:lat @loc)]
+                                             ;:bearing 0
+                                             ;:speed 0.8})))
+                             ;(go-loop []
+                                ;(<! (timeout 200))
+                                ;(if @geoloading?
+                                  ;(do (recur))
+                                  ;(do (log "adding now")
+                                      ;(.. @mapb (addSource "markers" #js {"type" "geojson"
+                                                                          ;"data" @geojson}))
+                                      ;;(log (str @geojson))
+                                      ;;(.addLayer @mapb (.. js/L (markerClusterGroup) (addLayer (.. js/L (geoJson @geojson)))))
+                                      ;(.. @mapb (addLayer #js {"id" "markers"
+                                                           ;"type" "circle"
                                                            ;"layout" #js {"icon-image" "airport-15"
                                                                          ;"text-field" "{title}"
                                                                          ;"text-size" 30}
-                                                           "paint" #js {"circle-color" "white"
-                                                                        "circle-opacity" 0.4
-                                                                        "circle-radius" 40}
-                                                           "source" "markers"}))
+                                                           ;"paint" #js {"circle-color" "white"
+                                                                        ;"circle-opacity" 0.4
+                                                                        ;"circle-radius" 40}
+                                                           ;"source" "markers"}))
                                       ;(log (.. @mapb (getLayer "markers")))
-                                      ))))))
+                                      ;))))))
+                                      )
 
        :reagent-render
        (fn []
@@ -228,7 +235,8 @@
           [:div {:style {:height "100%" :width "100%" :background-color "rgba(100,100,100,0)" :display "none"}}]])})))
 
 (defn root []
-  (let [display? (subscribe [:display-info-box?])]
+  (let [display? (subscribe [:display-info-box?])
+        loc (subscribe [:my-location])]
     (fn []
       [:div
         [:div {:style {:display "block"
@@ -256,5 +264,6 @@
         el (or (by-id "ext-map-div") (.. js/document -body (appendChild node)))
         div (set! (.-id el) "ext-map-div")]
     (dispatch-sync [:initialise-db])
-    (set! js/mapboxgl.accessToken "pk.eyJ1IjoiamFjb2JtYnIiLCJhIjoiY2lvMHl6d2ZqMTl5N3U2bHkxZ3h4NXRlNCJ9.gakQNsRrGKwvW-FkTAHcZQ")
+    (set! js/mapboxgl.accessToken "pk.eyJ1IjoiamFjb2JtYnIiLCJhIjoiY2lvOHZpdjNsMDJ1a3Z6bHp5c3hkajBlOSJ9.Ac8THsNAz1fAMXfd-MzneQ")
+    (set! js/L.mapbox.accessToken "pk.eyJ1IjoiamFjb2JtYnIiLCJhIjoiY2lvOHZpdjNsMDJ1a3Z6bHp5c3hkajBlOSJ9.Ac8THsNAz1fAMXfd-MzneQ")
   	(r/render [root] (by-id "ext-map-div"))))
