@@ -3,14 +3,15 @@
                    [cljs.core.async.macros :refer [go-loop go]]
                    [hiccups.core :as hiccups :refer [html]])
   (:require [reagent.core :as r]
-            [re-frame.core :refer [dispatch dispatch-sync subscribe]]
-            [thesis.content-script.animation :as anim]
-            [chromex.logging :refer-macros [log]]
-            [domina.events :as evt]
-            [domina.css :refer [sel]]
             [cljs.core.async :refer [<! >! chan timeout put!]]
+            [re-frame.core :refer [dispatch dispatch-sync subscribe]]
+            [chromex.support :refer-macros [oget]]
+            [chromex.logging :refer-macros [log]]
+            [thesis.content-script.animation :as anim]
             [thesis.content-script.subs]
             [thesis.content-script.handlers]
+            [domina.events :as evt]
+            [domina.css :refer [sel]]
             [domina.core :refer [by-id value set-value! destroy! append! by-class]]))
 
 (def img-data (r/atom nil))
@@ -51,9 +52,10 @@
             (if (< i (count text)) (recur (inc i)))) (* 200 ldel)))
        :reagent-render
        (fn [cnt del]
-         [:span {:style {:color "#eee"
-                                    :font-weight "400"
-                                    :transition "all 0.3s ease"}} @draw-string])})))
+         (if (> cnt 1)
+           [:span {:style {:color "#eee"
+                                      :font-weight "400"
+                                      :transition "all 0.3s ease"}} @draw-string]))})))
 
 (defn satellite [dom del]
   (let [el (subscribe [:in-data dom])
@@ -126,7 +128,7 @@
                    :height "100%"
                    :width "100%"
                    :overflow (if @show-text? "scroll" "visible" )}}
-     (log @data)
+     (log "DATA: " @data)
      (map-indexed #(do ^{:key %2} [satellite %2 %1]) (keys @sdata))]))
 
 
@@ -179,7 +181,7 @@
 (defn init! [img tabdict tabId counts core-chan]
   (if-not (by-id "ext-canvas-container")
     (let [node (.. js/document (createElement "div"))
-          el (.. js/document -body (appendChild node))
+          el (.. (oget js/document "body") (appendChild node))
           div (set! (.-id el) "ext-canvas-container")
           dim [(.-innerWidth js/window) (.-innerHeight js/window)]
           data (atom nil)]

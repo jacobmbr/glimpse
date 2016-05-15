@@ -129,7 +129,7 @@
   :get-location-counts
   (fn [db [c res]]
     (if (get db :location-counts) 
-      (log "aber wir haben schon counts, ist das hier? " c)
+      (log "aber wir haben schon counts")
       (post! db {:reqtype "get-location-counts"}))
     (assoc db :loading-location-counts? true)))
 
