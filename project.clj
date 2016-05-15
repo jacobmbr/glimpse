@@ -3,15 +3,14 @@
                  [org.clojure/clojurescript "1.8.51"]
                  [org.clojure/core.async "0.2.374"]
                  [binaryage/chromex "0.4.0"]
-                 [binaryage/devtools "0.6.1"]
                  [figwheel "0.5.2"]
                  [org.clojars.magomimmo/domina "2.0.0-SNAPSHOT"]
                  [cljs-idxdb "0.1.0"]
                  [hiccups "0.3.0"]
                  [cljs-ajax "0.5.4"]
                  [reagent "0.6.0-alpha"]
-                 [re-frame "0.7.0"]
                  [binaryage/dirac "0.3.0"]
+                 [re-frame "0.7.0"]
                  [binaryage/devtools "0.6.1"]
                  [timothypratley/reanimated "0.1.4"]
                  [environ "1.0.2"]]
@@ -67,14 +66,13 @@
                                            :optimizations :none
                                            :source-map    true}}
                            :content-script
-                           {:source-paths ["src/content_script" "src/dev"]
+                           {:source-paths ["src/dev" "src/content_script"]
                             :notify-command ["./scripts/concat-content.sh"]
                             :compiler     {:output-to     "resources/unpacked/compiled/content_script/thesis.js"
                                            :output-dir    "resources/unpacked/compiled/content_script"
                                            :asset-path    "compiled/content_script"
                                            :main "thesis.content-script"
                                            :optimizations :none                                                         ; content scripts cannot do eval / load script dynamically
-                                           ;:optimizations :none                                                         ; content scripts cannot do eval / load script dynamically
                                            :verbose true
                                            :parallel-build true
                                            :closure-output-charset "US-ASCII"
@@ -82,6 +80,7 @@
                                            ;:cache-analysis true
                                            :source-map true}}}}}
                                            ; TODO This was initially along with optimizations :whitespace !
+                                           ;:optimizations :whitespace 
                                            ;:source-map    "resources/unpacked/compiled/content_script/thesis.js.map"}}}}}
              :checkouts
              ; DON'T FORGET TO UPDATE scripts/ensure-checkouts.sh
@@ -96,9 +95,8 @@
                                                            "checkouts/chromex/src/exts"]}}}}
 
              :figwheel
-             {:figwheel {:server-port    6888
-                         :server-logfile ".figwheel_dirac.log"
-                         :repl           false}}
+             {:figwheel {:server-port 6888
+                         :repl false}}
 
              :dev-mode
              {:cooper {"content"  ["lein" "content"]

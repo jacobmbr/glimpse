@@ -34,17 +34,16 @@
     (swap! clients remove-item tabId)))
 
 (defn add-client! [client]
-  ;(log "BACKGROUND: client connected" (get-sender client))
+  (log "BACKGROUND: client connected" (get-sender client))
   (t-storage/tabdict-add-client (.. (get-sender client) -tab -id))
-  ;(remove-client-by-id! (.. (get-sender client) -tab -id))
-  (swap! clients conj client)
-  (log "Clients: " @clients))
+  (swap! clients conj client))
 
 (defn remove-client! [client]
-  (log "BACKGROUND: client disconnected" (get-sender client))
-  (t-storage/tabdict-remove-client (.. (get-sender client) -tab -id))
-  (let [remove-item (fn [coll item] (remove #(identical? item %) coll))]
-    (swap! clients remove-item client)))
+  (let [tabId (.. (get-sender client) -tab -id)]
+    (t-storage/tabdict-remove-client tabId)
+    (let [remove-item (fn [coll item] (remove #(= tabId (oget (get-sender %) "tab" "id")) coll))]
+      (swap! clients remove-item client))
+    (log "Client " tabId "disconnected, remaining: " (doall (map #(oget (get-sender %) "tab" "id") @clients)))))
 
 ; -- client event loop ------------------------------------------------------------------------------------------------------
 
@@ -64,10 +63,13 @@
           "get-location-counts" (t-storage/get-location-counts res-chan)
           "site-info" (t-storage/get-site-info res-chan (oget message "req"))
           "all-for-domain" (do (t-storage/get-all-for-domain res-chan (oget message "req") (oget message "typ")))
-          "close-chan" (close! res-chan)
+          "close-chan" (log message) ;close! res-chan)
           "open-tab" (let [target-url (oget message "domain")
                            typ (oget message "typ")]
-                       (.. (oget js/chrome "tabs") (create #js {"url" (.. (oget js/chrome "extension") (getURL "map.html"))} #(reset! initialise-tab {:typ typ :url target-url}))))
+                       (log typ target-url)
+                       (.. (oget js/chrome "tabs") 
+                           (create #js {"url" (.. (oget js/chrome "extension") (getURL "map.html"))} 
+                                   #(reset! initialise-tab {:typ typ :url target-url}))))
           (log "unhandled!: " message))
           (recur))
         (do (close! res-chan) (remove-client! client))))
@@ -80,13 +82,14 @@
 ; -- event handlers ---------------------------------------------------------------------------------------------------------
 
 (defn handle-client-connection! [client]
-  (add-client! client)
-  ;(log "Handle client connection: " client)
-  (message-to-client (oget (get-sender client) "tab" "id") #js {"restype" "ACK" "init-url" (get @initialise-tab :url) "typ" (get @initialise-tab :typ)})
-  (run-client-message-loop! client))
+  ;(if-not (contains? @tabs (oget (get-sender client) "tab" "id"))
+    (do 
+      (log "Handle client connection: " client)
+      (add-client! client)
+      (message-to-client (oget (get-sender client) "tab" "id") #js {"restype" "ACK" "init-url" (get @initialise-tab :url) "typ" (get @initialise-tab :typ)})
+      (run-client-message-loop! client)))
 
 (defn tell-clients-about-new-tab! [tab]
-  (log tab)
   (doseq [client @clients]
     ;(post-message! client "a new tab was created")
     ))

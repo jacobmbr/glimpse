@@ -1,0 +1,20 @@
+div {background: transparent}
+body {margin: 0; padding: 0; color: white; font-family: "Source Code Pro"}
+h1 {font-weight: 400}
+.history-div {
+  display: block;
+  font-size: 13px;
+  /*position: absolute;*/
+  /*transform: rotate(-45deg);*/
+  /*transform-origin: bottom left;*/
+  font-family "Helvetica Neue";
+}
+a {
+  font-size 13px;
+  font-weight: 200;
+  text-decoration: none;
+}
+#ext-map-div {
+  height: 100%;
+  width: 100%;
+}

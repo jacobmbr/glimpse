@@ -126,6 +126,7 @@
                    :height "100%"
                    :width "100%"
                    :overflow (if @show-text? "scroll" "visible" )}}
+     (log @data)
      (map-indexed #(do ^{:key %2} [satellite %2 %1]) (keys @sdata))]))
 
 

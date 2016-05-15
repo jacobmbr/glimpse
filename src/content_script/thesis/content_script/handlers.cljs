@@ -15,6 +15,8 @@
     (let [obj (atom {})
           maxcnt (atom 0)
           mincnt (atom 0)]
+      (log "Counts: " counts)
+       (log "Data: "  data)
       (doseq [[dom cnt] (vec (sort-by val > (js->clj counts)))]
           (if (and (contains? data (keyword dom)) (not (= dom tabUrl)))
             (do

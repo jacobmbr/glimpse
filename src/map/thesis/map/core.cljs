@@ -17,6 +17,7 @@
 (def gui-chan (atom nil))
 (def msg-to-gui (atom nil))
 (def background-channel (atom nil))
+(dirac/install!)
 
 ;(defn process-message! [message]
   ;(condp = (oget message "restype")

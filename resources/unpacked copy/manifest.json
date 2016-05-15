@@ -1,0 +1,52 @@
+/* this manifest is for development only
+   we include all files individually
+   also we allow unsafe eval for figwheel
+*/
+{
+  "name": "chromex-sample-dev",
+  "version": "0.1.0",
+  "browser_action": {
+    "default_title": "Show the popup",
+    "default_icon": {
+      "19": "images/icon19.png",
+      "38": "images/icon38.png"
+    }
+  },
+  "icons": {
+    "16": "images/icon16.png",
+    "48": "images/icon48.png",
+    "128": "images/icon128.png"
+  },
+  "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'",
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*/*"
+      ],
+      "js": [
+        "cs_override.js",
+        "js/pt.js",
+        "js/three.min.js",
+        "js/tween.min.js",
+        "js/CSS3DRenderer.js",
+        "compiled/content_script/thesis.js",
+        "content-script.js"
+      ],
+      "css": ["css/content_styles_dom.css"],
+      "run_at": "document_start"
+    }
+  ],
+  "background": {
+    "page": "background.html",
+    "persistent": true
+  },
+  "permissions": [
+    "storage",
+    "webRequest",
+    "<all_urls>",
+    "geolocation",
+    "tabs",
+    "history"
+  ],
+  "manifest_version": 2
+}
