@@ -73,7 +73,7 @@
                        (log typ target-url)
                        (.. (oget js/chrome "tabs") 
                            (create #js {"url" (.. (oget js/chrome "extension") (getURL "map.html"))} 
-                                   #(reset! initialise-tab {:typ typ :url target-url}))))
+                                   #(reset! initialise-tab {:typ typ :url target-url :location @location}))))
           (log "unhandled!: " message))
           (recur))
         (do (close! res-chan) (remove-client! client))))
@@ -107,7 +107,11 @@
 (defn tell-client-about-click! [id url]
   (.. (oget js/chrome "tabs") (captureVisibleTab
                         #js {"quality" 50}
-                        #(message-to-client id (clj->js {:type "init" :id id :img % :tabdict (t-storage/get-tabdict id) :url url})))))
+                        #(message-to-client id (clj->js {:type "init" 
+                                                         :id id 
+                                                         :img % 
+                                                         :tabdict (t-storage/get-tabdict id) 
+                                                         :url url})))))
 
 (defn tell-client-about-request! [tabId tabUrl r]
   (message-to-client tabId (clj->js {:type "new-request" :tabdict (t-storage/get-tabdict tabId)})))

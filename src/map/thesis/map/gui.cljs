@@ -15,36 +15,39 @@
             [thesis.map.handlers]
             [domina.core :refer [by-id value set-value! destroy! append! by-class]]))
 
-(defn history-item [text cnt]
+(defn history-item [text cnt idx]
   (let [mouse (subscribe [:mouse])
         x (reaction (first @mouse))
         y (reaction (peek @mouse))
+        show (r/atom false)
         delta (r/atom 1)
         wh (reaction (/ (first (subscribe [:window])) 2))]
 
     (r/create-class
-      {:component-did-update
-       #()
+      {:component-did-mount
+       #(reset! show true)
        :display-name "history-item"
        :reagent-render
-       (fn [text cnt]
+       (fn [text cnt idx]
+         [anim/pop-when @show 
             [:div {:class "history-div"
                    :style {
                       :font-weight "200"
                       :display "flex"
                       }} 
-               [:div {:style {:flex "0 1 20%"}} [:div {:style {:text-align "right"
+               [:div {:style {:flex "0 0 20%"}} [:div {:style {:text-align "right"
                                                                :padding-right "10px"
                                                                :padding-bottom "15px"
-                                                               :font-size (str (+ 14 (min 12 (/ cnt 10))) "px")
+                                                               :font-size (str (+ 12 (min 12 (/ cnt 10))) "px")
                                                                }} cnt]]
-               [:div {:on-click #(dispatch [:show-site-info text])
-                       :style {:flex "0 1 80%"
+               [:div {:style {:flex "0 8 80%"
                                :border-left "1px solid white"
-                               :font-size (str (+ 14 (min 12 (/ cnt 10))) "px")}}
-                [:span {:style {:margin-left "10px"
+                               :font-size (str (+ 12 (min 12 (/ cnt 10))) "px")}}
+                [:a {:on-click (fn [e] (dispatch [:show-site-info text]) (.preventDefault e))
+                     :href "#"
+                     :style {:margin-left "10px"
                                 :color (if (nil? cnt) "rgba(255,255,255,0.3)" "rgba(255,255,255,1)")
-                                }} text]]])})))
+                                }} text]]]])})))
 
 (defn history []
   (let [history (subscribe [:history])
@@ -71,12 +74,13 @@
                                                                              ;:font-size "25px"}} "Your History"]]]
 
          [:div {:style {:background-color "rgba(100,100,100, 0.5)"
-                        :max-height "100vh"
+                        :height "100vh"
+                        :pointer-events "auto"
                         :padding "60px 0 0 0"
                         :overflow "auto"}} 
           (if @has-counts? 
             (doall (map-indexed #(do
-                         ^{:key %2} [history-item %2 (get @cnts %2)]) @history)))]
+                         ^{:key %2} [history-item %2 (get @cnts %2) %1]) @history)))]
          ;]]
       )))
 
@@ -130,7 +134,7 @@
     (fn []
        (if-not @loading? 
          [:div 
-          [:h1 "Who saw you on " @domain]
+          [:h1 "Who saw you on " @domain] [:a {:href "" :on-click (fn [e] (.preventDefault e) (dispatch [:display-info-box false]))} "Close x"]
            [:h2 (count @site-info) " third parties saw you on this site " @domain "."]
            [:span (for [x @site-info] 
                     (let [dom (get x "domain")]
@@ -151,6 +155,7 @@
                          :top "0px"
                          :padding "40px 0 0 0"
                          :transition "all 0.5s ease"
+                         :pointer-events "auto"
                          :height "100vh"
                          :background-color "rgba(100,100,100, 0.5)"}}
              (if (= "domain" @view-mode) [domain-infobox])
@@ -181,9 +186,8 @@
                  (js/mapboxgl.Map.
                    (clj->js {:container "map"
                              :zooom 9
-                             :center [-122.083851 37.386052]
-                             :style "mapbox://styles/mapbox/dark-v8"
-                             :test "hu"})))
+                             :center [-12.083851 37.386052]
+                             :style "mapbox://styles/mapbox/dark-v8"})))
          (.on @mapb "load" (fn []
                              (destroy! (by-class "mapboxgl-ctrl-attrib")) ;sorry!
                              (.. @mapb (flyTo (clj->js
@@ -228,7 +232,6 @@
     (fn []
       [:div
         [:div {:style {:display "block"
-                       :z-index "-1000"
                        :position "fixed"
                        :top "0px"}} [mapbox]]
 
@@ -237,10 +240,12 @@
                        :position "absolute"
                        :top "0px"
                        :left "0px"
+                       :pointer-events "none"
                        :flex-flow "row"}}
-          [:div {:style {:flex "0 1 30%"}} 
+          [:div {:style {:flex "0 1 20%"}} 
            [history]]
-          [:div {:style {:flex "0 1 70%"}}
+          [:div {:style {:flex "0 1 80%"
+                         :pointer-events "none"}}
             (if @display? [infobox])]
            ;[show-state]
            ;[display-domains]

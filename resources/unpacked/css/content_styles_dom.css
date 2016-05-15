@@ -15,6 +15,9 @@ h1.ext-h1 {
 #ext-space canvas {
   pointer-events: none;
 }
+#ext-canvas-container {
+  /*z-index: 214748364 !important;*/
+}
 #ext-canvas-container a, #ext-canvas-container h1, #ext-canvas-container p {
   font-family: "Source Code Pro" !important;
   color: white !important;

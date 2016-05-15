@@ -82,7 +82,6 @@
 
 (register-handler
   :handle-domain-info
-  debug
   (fn [db [_ res domain]]
     (assoc db :domain-info {:domain domain
                             :data res}
