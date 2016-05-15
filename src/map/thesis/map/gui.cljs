@@ -53,37 +53,43 @@
 (defn history []
   (let [history (subscribe [:history])
         cnts (subscribe [:site-counts])
+        move? (r/atom false)
+        margin (anim/interpolate-if move? 0 -100)
         has-counts? (reaction (not (nil? @cnts)))]
-    (fn [this]
-      (log "histch" @cnts @has-counts?)
-      ;[:div {:style {:display "flex"
-                     ;:height "100%"
-                     ;:top "0px"
-                     ;:overflow-y "hide"
-                     ;:background-color "rgba(100,100,100, 0.5)"}}
-        ;[:div {:style {
-                       ;:flex "0 1 20%"
-                       ;:height "100%"}} "hu"]
-        ;[:div {:style {
-                       ;:flex "0 1 80%"
-                       ;:min-width "1000px"
-                       ;:overflow "auto"
-                       ;:border-left "1px solid white"
-                       ;:height "100%"}}
-         ;[:div {:class "history-div" :style {:margin "50px 0 50px 0" }}
-          ;(gs/unescapeEntities"&#8212;&#8212;&#8212;&nbsp;") [:a {:href "" :on-click #(dispatch [:show-domain-info "adzerk.net"])} [:span {:style {:text-decoration "underline"
-                                                                             ;:font-size "25px"}} "Your History"]]]
-
+    (r/create-class
+      {:display-name "History"
+       :component-did-mount
+       #(do
+          (log (anim/toggle-handler move?))
+          (dispatch [:set-toggler (anim/toggle-handler move?)]))
+       :reagent-render
+       (fn [this]
          [:div {:style {:background-color "rgba(100,100,100, 0.5)"
                         :height "100vh"
+                        :top "0"
+                        :left "0"
+                        :flex "0 0 100%"
                         :pointer-events "auto"
-                        :padding "60px 0 0 0"
-                        :overflow "auto"}} 
-          (if @has-counts? 
-            (doall (map-indexed #(do
-                         ^{:key %2} [history-item %2 (get @cnts %2) %1]) @history)))]
-         ;]]
-      )))
+                        :overflow-y "auto"
+                        :overflow-x "hidden"}} 
+            [:div {:style {:height "60px"
+                           :width "100%"}} [:a {:on-click (anim/toggle-handler move?)} "Clickme"]]
+          [:div {:style {:margin-left (str @margin "%")
+                         :width "200%"
+                         :display "flex"
+                         :flex-flow "row"}}
+           [:div {:style {:flex "0 0 50%"
+                          :height "100%"}}
+              (if @has-counts? 
+                (doall (map-indexed #(do
+                             ^{:key %2} [history-item %2 (get @cnts %2) %1]) @history)))]
+           [:div {:style {:flex "0 0 50%"
+                          :height "100%"}}
+              (if @has-counts? 
+                (doall (map-indexed #(do
+                             ^{:key %2} [history-item %2 (get @cnts %2) %1]) @history)))]
+           ]]
+      )})))
 
 (defn display-locations []
   (let [locations (subscribe [:distinct-locations])
@@ -154,10 +160,11 @@
                          ;:height "100%"
                          ;:left "30%"
                          :top "0px"
-                         :padding "40px 0 0 0"
+                         ;:padding "40px 0 0 0"
                          :transition "all 0.5s ease"
                          :pointer-events "auto"
                          :height "100vh"
+                         :overflow "auto"
                          :background-color "rgba(100,100,100, 0.5)"}}
              (if (= "domain" @view-mode) [domain-infobox])
              (if (= "site" @view-mode) [site-infobox])
@@ -256,9 +263,12 @@
                        :left "0px"
                        :pointer-events "none"
                        :flex-flow "row"}}
-          [:div {:style {:flex "0 1 20%"}} 
+          [:div {:style {:flex "0 0 30%"
+                         :display "flex"
+                         :flex-flow "row"
+                         :overflow-x "hidden"}}
            [history]]
-          [:div {:style {:flex "0 1 80%"
+          [:div {:style {:flex "0 0 70%"
                          :pointer-events "none"}}
             (if @display? [infobox])]
            ;[show-state]

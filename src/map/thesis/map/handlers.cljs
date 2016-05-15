@@ -22,7 +22,7 @@
 (defn listen! [res-chan]
   (go-loop []
     (when-let [msg (<! res-chan)]
-      (log "BG msg: " msg)
+      ;(log "BG msg: " msg)
       (condp = (.-restype msg)
         "ACK" (let [init-url (oget msg "init-url")
                     init-typ (oget msg "typ")]
@@ -56,9 +56,9 @@
 (register-handler
   :get-history
   (fn [db _] 
-      (.. js/chrome -history (search #js {"text" ""
+      (.. (oget js/chrome "history") (search #js {"text" ""
                                           "startTime" (- (.now js/Date) (* 1000 60 60 24 7))
-                                          "maxResults" 1000} #(dispatch [:handle-history %])))
+                                          "maxResults" 100} #(dispatch [:handle-history %])))
     db))
 
 (register-handler
@@ -193,7 +193,8 @@
   :set-map
   debug
   (fn [db [_ id]]
-    (assoc db :map (.. (oget js/L "mapbox") (map "map") (setView (array 40.73 -74.011) 13) (addLayer (js/L.mapbox.styleLayer "mapbox://styles/mapbox/dark-v8"))))))
+    (let [mapb (.. (oget js/L "mapbox") (map "map") (setView (array 40.73 -74.011) 13) (addLayer (js/L.mapbox.styleLayer "mapbox://styles/mapbox/dark-v8")))]
+    (assoc db :map (.. mapb (removeControl (oget mapb "zoomControl")))))))
 
 (register-handler
   :handle-mouse
@@ -208,37 +209,44 @@
           (clj->js {:type "FeatureCollection"
               :features (reduce #(conj %1 (let [strs (split (first %2) #"\|")]
                                             {:type "Feature"
-                                             :properties {:title (peek %2)
-                                                          :marker-symbol "airport"}
+                                             :properties {:count (peek %2)}
                                              :geometry {:type "Point"
                                                         :coordinates #js [(subs (get strs 1) 0 7) (subs (first strs) 0 7)]}})) [] (get db :location-counts))}))))
-(defn make-marker-html [text]
+
+(defn make-marker-html [children]
   (do
-    (log text)
-    (html [:div.cluster {:style "background-color: rgba(255,255,255,0.4);
+    (html [:div.cluster {:style "
+                               background-color: rgba(255,255,255,0.2) !important;
+                               opacity: 1;
                                width: 100px;
                                height: 100px;
+                               border: 3px solid white;
+                               transform: translate(-50px,-50px);
                                border-radius: 50px;"} 
          [:span {:style "font-size: 20px;
                          display: block;
-                         transform: translate(200px,0) scale(2,2);
+                         width: 100px;
+                         color: #fff;
+                         margin-left: 0px;
+                         line-height: 100px;
+                         font-family: 'Source Code Pro';
+                         font-size: 30px;
+                         text-align: center;
                          background-color: transparent;
-                         margin: 0 auto;"} "Moin"]])))
+                         "} (reduce #(+ %1 (oget %2 "feature" "properties" "count")) 0 children)]])))
+;for mapping them: (map-indexed #(do ^{:key %} [:p %]) children)
 
 (register-handler
   :set-marker-clusters
-  debug
   (fn [db [_ _]]
     (let [mapb (get db :map)
-          geojson (get db :geojson)]
-      (.. mapb (eachLayer #(log %)))
-      (.. mapb 
-          (addLayer 
-            (.. (L.MarkerClusterGroup. #js {"showCoverageOnHover" "false" 
-                                            "singleMarkerMode" "true"
-                                            "iconCreateFunction" #(js/L.divIcon #js {"html" (make-marker-html (.getAllChildMarkers %))})})
-                                                                                                                  ;(log (.getAllChildMarkers %)))
-                (addLayer (.. js/L (geoJson geojson))))))
+          geojson (get db :geojson)
+          clusters (atom nil)]
+      (reset! clusters (L.MarkerClusterGroup. #js {"showCoverageOnHover" "false" 
+                                                   "singleMarkerMode" "true"
+                                                   "zoomToBoundsOnClick" "false"
+                                                   "iconCreateFunction" #(js/L.divIcon #js {"html" (make-marker-html (.getAllChildMarkers %))})}))
+      (.. mapb (addLayer (.. @clusters (addLayer (.. js/L (geoJson geojson))))))
       (assoc db :added-markers? true))))
 
 (register-handler :show-state (fn [db [_ v]] (assoc db :show-state v)))
@@ -247,12 +255,12 @@
   :track-window
   (fn [db _]
     (.. js/window (addEventListener "resize" #(dispatch [:handle-window])))
-    (assoc db :window [(.. js/window -innerWidth) (.. js/window -innerHeight)])))
+    (assoc db :window [(oget js/window "innerWidth") (oget js/window "innerHeight")])))
 
 (register-handler
   :handle-window
   (fn [db _]
-    (assoc db :window [(.. js/window -innerWidth) (.. js/window -innerHeight)])))
+    (assoc db :window [(oget js/window "innerWidth") (oget js/window "innerHeight")])))
 
 (register-handler
   :track-mouse
@@ -284,9 +292,19 @@
 
 (register-handler
   :init-box
-  debug
   (fn [db [_ typ url]]
     (if (= typ "domain")
       (do (log "dispatching domain info") (dispatch [:show-domain-info url]))
       (do (log "dispatching site info") (dispatch [:show-site-info url])))
+    db))
+
+(register-handler
+  :set-toggler
+  (fn [db [_ v]]
+    (assoc db :toggler v)))
+
+(register-handler
+  :toggle
+  (fn [db [_ _]]
+    ((get db :toggler))
     db))
