@@ -39,15 +39,18 @@
                [:div {:style {:flex "0 0 20%"}} [:div {:style {:text-align "right"
                                                                :padding-right "10px"
                                                                :padding-bottom "15px"
-                                                               :font-size (str (+ 12 (min 12 (/ cnt 10))) "px")
+                                                               :font-size "1em"
+                                                               ;:font-size (str (+ 12 (min 12 (/ cnt 10))) "px")
                                                                }} cnt]]
                [:div {:style {:flex "0 8 80%"
                                :border-left "1px solid white"
-                               :font-size (str (+ 12 (min 12 (/ cnt 10))) "px")}}
+                               :font-size "1em"
+                               ;:font-size (str (+ 12 (min 12 (/ cnt 10))) "px")
+                               }}
                 [:a {:on-click (fn [e] (dispatch [:show-site-info text]) (.preventDefault e))
                      :href "#"
                      :style {:margin-left "10px"
-                                :color (if (nil? cnt) "rgba(255,255,255,0.3)" "rgba(255,255,255,1)")
+                             :color (if (nil? cnt) "rgba(255,255,255,0.3)" "rgba(255,255,255,1)")
                                 }} text]]]])})))
 
 (defn history []
@@ -60,11 +63,12 @@
       {:display-name "History"
        :component-did-mount
        #(do
-          (log (anim/toggle-handler move?))
+          ;(log (anim/toggle-handler move?))
           (dispatch [:set-toggler (anim/toggle-handler move?)]))
        :reagent-render
        (fn [this]
-         [:div {:style {:background-color "rgba(100,100,100, 0.5)"
+         [:div {:style {;:background-color "rgba(100,100,100, 0.2)"
+                        :background "linear-gradient(to right, rgba(0,0,0,1) 0%,rgba(0,0,0,0) 100%)"
                         :height "100vh"
                         :top "0"
                         :left "0"
@@ -165,7 +169,7 @@
                          :pointer-events "auto"
                          :height "100vh"
                          :overflow "auto"
-                         :background-color "rgba(100,100,100, 0.5)"}}
+                         :background-color "rgba(100,100,100, 0.1)"}}
              (if (= "domain" @view-mode) [domain-infobox])
              (if (= "site" @view-mode) [site-infobox])
              ]
@@ -184,7 +188,6 @@
 (defn mapbox []
   (let [mapb (subscribe [:map])
         geojson (subscribe [:geojson])
-        layers (reaction )
         geoloading? (subscribe [:loading-location-counts?])
         loc (subscribe [:my-location])]
     (r/create-class
@@ -196,46 +199,7 @@
        :component-did-mount
        (fn [this]
          (dispatch-sync [:set-map "map"])
-         ;(reset! mapb
-                 ;(.. (oget js/L "mapbox") (map "map") (setView (array 40.73 -74.011) 13) (addLayer (js/L.mapbox.styleLayer "mapbox://styles/mapbox/dark-v8"))))
-
-         ;(.. js/L.mapbox (featureLayer @geojson) (on "ready" (fn [e] (do (log "hual") (.. (oget e "target") (eachLayer #(log "huhu" %)))))) (addTo @mapb))
-         ;(js/setTimeout #(.. @mapb (addLayer (.. (L.MarkerClusterGroup.) (addLayer (.. js/L (geoJson @geojson)))))) 300)
-         ;(.. js/L.mapbox (featureLayer @geojson) (on "ready" (fn [e] (.. js/console (log "HUAHD"))) ))
-                 ;(js/mapboxgl.Map.
-                   ;(clj->js {:container "map"
-                             ;:zooom 9
-                             ;:center [-12.083851 37.386052]
-                             ;:style "mapbox://styles/mapbox/dark-v8"})))
-         ;(.on @mapb "load" (fn []
-                             ;(destroy! (by-class "mapboxgl-ctrl-attrib")) ;sorry!
-                             ;(.. @mapb (flyTo (clj->js
-                                            ;{:zoom 12
-                                             ;:center [(:lon @loc) (:lat @loc)]
-                                             ;:bearing 0
-                                             ;:speed 0.8})))
-                             ;(go-loop []
-                                ;(<! (timeout 200))
-                                ;(if @geoloading?
-                                  ;(do (recur))
-                                  ;(do (log "adding now")
-                                      ;(.. @mapb (addSource "markers" #js {"type" "geojson"
-                                                                          ;"data" @geojson}))
-                                      ;;(log (str @geojson))
-                                      ;;(.addLayer @mapb (.. js/L (markerClusterGroup) (addLayer (.. js/L (geoJson @geojson)))))
-                                      ;(.. @mapb (addLayer #js {"id" "markers"
-                                                           ;"type" "circle"
-                                                           ;"layout" #js {"icon-image" "airport-15"
-                                                                         ;"text-field" "{title}"
-                                                                         ;"text-size" 30}
-                                                           ;"paint" #js {"circle-color" "white"
-                                                                        ;"circle-opacity" 0.4
-                                                                        ;"circle-radius" 40}
-                                                           ;"source" "markers"}))
-                                      ;(log (.. @mapb (getLayer "markers")))
-                                      ;))))))
-                                      )
-
+         (destroy! (by-class "leaflet-control-attribution")))
        :reagent-render
        (fn []
          @geojson
@@ -249,12 +213,15 @@
 
 (defn root []
   (let [display? (subscribe [:display-info-box?])
+        got-loc? (subscribe [:my-location])
+        logloc (reaction (log @got-loc?))
         loc (subscribe [:my-location])]
     (fn []
       [:div
-        [:div {:style {:display "block"
+        (if @got-loc? 
+          [:div {:style {:display "block"
                        :position "fixed"
-                       :top "0px"}} [mapbox]]
+                       :top "0px"}} [mapbox]])
 
         [:div {:style {:display "flex"
                        :width "100%"

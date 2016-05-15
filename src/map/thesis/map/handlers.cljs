@@ -12,7 +12,7 @@
             [chromex.protocols :refer [post-message!]]
             [thesis.background.storage :as st]
             [chromex.ext.runtime :as runtime :refer-macros [connect]]
-            [re-frame.core :refer [register-handler path trim-v after debug dispatch]]))
+            [re-frame.core :refer [register-handler path trim-v after debug dispatch dispatch-sync]]))
 
 (def call-chan (atom nil))
 
@@ -26,6 +26,7 @@
       (condp = (.-restype msg)
         "ACK" (let [init-url (oget msg "init-url")
                     init-typ (oget msg "typ")]
+                (dispatch-sync [:handle-location (oget msg "location")])
                 (if-not (nil? init-url) 
                   (do 
                     (dispatch [:init-box init-typ init-url]))))
@@ -117,6 +118,7 @@
 
 (register-handler
   :handle-location
+  debug
   (fn [db [_ res]]
     (let [loc (js->clj res :keywordize-keys true)]
       (if (nil? (:lat loc)) (dispatch [:get-my-location]))
@@ -191,9 +193,9 @@
 
 (register-handler
   :set-map
-  debug
   (fn [db [_ id]]
-    (let [mapb (.. (oget js/L "mapbox") (map "map") (setView (array 40.73 -74.011) 13) (addLayer (js/L.mapbox.styleLayer "mapbox://styles/mapbox/dark-v8")))]
+    (let [loc (array (get-in db [:my-location :lat]) (get-in db [:my-location :lon]))
+          mapb (.. (oget js/L "mapbox") (map "map") (setView loc 13) (addLayer (js/L.mapbox.styleLayer "mapbox://styles/mapbox/dark-v8")))]
     (assoc db :map (.. mapb (removeControl (oget mapb "zoomControl")))))))
 
 (register-handler
@@ -220,7 +222,7 @@
                                opacity: 1;
                                width: 100px;
                                height: 100px;
-                               border: 3px solid white;
+                               border: 2px solid white;
                                transform: translate(-50px,-50px);
                                border-radius: 50px;"} 
          [:span {:style "font-size: 20px;
@@ -231,6 +233,7 @@
                          line-height: 100px;
                          font-family: 'Source Code Pro';
                          font-size: 30px;
+                         font-weight: 200;
                          text-align: center;
                          background-color: transparent;
                          "} (reduce #(+ %1 (oget %2 "feature" "properties" "count")) 0 children)]])))

@@ -90,7 +90,10 @@
     (do 
       (log "Handle client connection: " client)
       (add-client! client)
-      (message-to-client (oget (get-sender client) "tab" "id") #js {"restype" "ACK" "init-url" (get @initialise-tab :url) "typ" (get @initialise-tab :typ)})
+      (message-to-client (oget (get-sender client) "tab" "id") #js {"restype" "ACK" 
+                                                                    "location" @location
+                                                                    "init-url" (get @initialise-tab :url) 
+                                                                    "typ" (get @initialise-tab :typ)})
       (run-client-message-loop! client)))
 
 (defn tell-clients-about-new-tab! [tab]
