@@ -107,39 +107,24 @@
                        :top "100px"}}
         (if-not @loading? (for [x @locations] ^{:key x} [:span (map #(subs % 0 6) (take 2 (split x #"\|")))]) [:h1 "loading"])])))
 
-(defn display-domains []
-  (let [domains (subscribe [:distinct-domains])
-        loading? (subscribe [:loading-domains?])]
-    (fn []
-        [:div {:style {:height "45%"
-                       :width "100%"
-                       ;:padding "20px"
-                       :overflow "scroll"
-                       :background "rgba(3, 201, 200,0.5)"}}
-         [:div {:style {:padding "10px 10px 0 30px"}}
-          [:h1 "Where you've been and who was there with you."]
-          (if-not @loading? [:div (for [x @domains] ^{:key x} [:p
-                                                               [:a {:href "#"
-                                                                   :on-click #(dispatch [:get-domain-info x])
-                                                                   :style {:color "white" :font-size "15px"}} x] [:span " - "]])] [:p "loading"])]
-         ])))
-
-
 (defn domain-infobox []
-  (let [domain-info (subscribe [:domain-info])
-        domain (reaction (get @domain-info :domain))
+  (let [entry (subscribe [:domain-info])
+        domain-name (reaction (get @entry :domain))
+        domain-info (reaction (get @entry :data))
+        site-counts (reaction (-> (reduce #(update %1 (get %2 "tabUrl") inc) {} @domain-info)
+                                    (dissoc @domain-name)))
         info (reaction (get @domain-info :data))
-        loading? (subscribe [:loading-domain-info?])]
+        loading? (subscribe [:loading-domain-info?])
+        not-loading? (reaction (not @loading?))]
     (fn []
-         (if-not @loading? 
-           [:div 
-            [:h1 "Who saw you on " @domain]
-             [:h2 (count @info) " third parties saw you on the domain " @domain "."]
-             [:span (for [x @info]
-                      (let [url (get x "tabUrl")]
-                        ^{:key x} [:p [:a {:on-click #(dispatch [:show-site-info url])} (str url)]]))]
-           ]
-           [:h1 "loading..."]))))
+       [anim/fade-when @not-loading? 
+         [:div {:style {:width "90%" :margin "60px auto" :pointer-events "auto" :text-shadow "0 0 10px black" :border-top "1px solid white" }}
+          [:div.report-content {:style {:margin "0 0 0 20px"}}
+            [:h1 {:style {:font-size "2em"}} @domain-name [:span {:style {:color "#aaa"}} "  saw you 25"]]
+            [:pre (with-out-str (pprint @site-counts))]
+            [:a {:href "" :on-click (fn [e] (.preventDefault e) (dispatch [:display-info-box false]))} "Close x"]
+             [:h2 (count @domain-info) " third parties saw you on this site " @domain-name "."]
+           ]]])))
 
 (defn site-infobox []
   (let [entry (subscribe [:site-info])
@@ -208,13 +193,19 @@
 (defn mapbox []
   (let [mapb (subscribe [:map])
         cluster-bounds (subscribe [:cluster-bounds])
+        cluster-layer (subscribe [:cluster-layer])
+        geojson (subscribe [:geojson])
         geoloading? (subscribe [:loading-location-counts?])
         loc (subscribe [:my-location])]
     (r/create-class
       {:display-name "MapBox Component"
        :component-did-update
        #(do 
-          (log "update mapbox" @cluster-bounds))
+          (log "update mapbox" @cluster-bounds " with geoj " @geojson)
+          (if @geojson
+            (do 
+              (.. @mapb (addLayer (.. @cluster-layer (addLayer (.. js/L (geoJson @geojson))))))
+              (.. @mapb (fitBounds (.. @cluster-layer (getBounds)) #js {"paddingTopLeft" (array 400 400)})))))
        :component-did-mount
        (fn [this]
          (dispatch-sync [:set-map "map"])

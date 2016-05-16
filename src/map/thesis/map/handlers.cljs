@@ -87,6 +87,7 @@
 (register-handler
   :handle-domain-info
   (fn [db [_ res domain]]
+    (dispatch [:domain-or-site-to-clusters "domain"])
     (assoc db :domain-info {:domain domain
                             :data res}
                             :loading-domain-info? false)))
@@ -95,6 +96,7 @@
   :handle-site-info
   (fn [db [_ res]]
     (log "received site info: " res)
+    (dispatch [:domain-or-site-to-clusters "site"])
     (assoc db :site-info res
               :loading-site-info? false)))
 
@@ -223,9 +225,9 @@
 (register-handler
   :domain-or-site-to-clusters
   (fn [db [_ dom-or-site]]
-    (log (if (= dom-or-site "site") :site-info :domain-info))
-    (dispatch [:set-marker-clusters])
-    (assoc db :geojson (geojson-from-domain-info (get-in db [(if (= dom-or-site "site") :site-info :domain-info) :data])))))
+    (let [temp (geojson-from-domain-info (get-in db [(if (= dom-or-site "site") :site-info :domain-info) :data]))]
+      (dispatch [:set-marker-clusters])
+      (assoc db :geojson temp))))
 
 (register-handler
   :make-geojson
@@ -275,8 +277,8 @@
                                                    "singleMarkerMode" "true"
                                                    "zoomToBoundsOnClick" "false"
                                                    "iconCreateFunction" #(js/L.divIcon #js {"html" (make-marker-html (.getAllChildMarkers %))})}))
-      (.. mapb (addLayer (.. @clusters (addLayer (.. js/L (geoJson geojson))))))
-      (.. mapb (fitBounds (.. @clusters (getBounds)) #js {"paddingTopLeft" (array 400 400)}))
+      ;(.. mapb (addLayer (.. @clusters (addLayer (.. js/L (geoJson geojson))))))
+      ;(.. mapb (fitBounds (.. @clusters (getBounds)) #js {"paddingTopLeft" (array 400 400)}))
       (assoc db :added-markers? true
                 :cluster-layer @clusters
                 :cluster-bounds (.. @clusters (getBounds))))))
@@ -310,7 +312,6 @@
   :show-site-info
   (fn [db [_ domain]]
     (dispatch [:get-site-info domain])
-    (dispatch [:domain-or-site-to-clusters "site"])
     (assoc db :view-mode "site"
               :display-info-box? true
               :loading-site-info? true)))
@@ -319,7 +320,6 @@
   :show-domain-info
   (fn [db [_ domain]]
     (dispatch [:get-domain-info domain])
-    (dispatch [:domain-or-site-to-clusters "domain"])
     (assoc db :display-info-box? true
            :view-mode "domain"
            :loading-domain-info? true)))
