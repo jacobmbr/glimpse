@@ -59,7 +59,7 @@
   (fn [db _] 
       (.. (oget js/chrome "history") (search #js {"text" ""
                                           "startTime" (- (.now js/Date) (* 1000 60 60 24 7))
-                                          "maxResults" 100} #(dispatch [:handle-history %])))
+                                          "maxResults" 200} #(dispatch [:handle-history %])))
     db))
 
 (register-handler
@@ -106,6 +106,7 @@
 (register-handler
   :get-site-info
   (fn [db [_ domain]]
+    (log domain)
     (post! db {:reqtype "site-info" :req domain :typ "site"})
     (assoc db :loading-site-info? true)))
 
@@ -195,7 +196,8 @@
   :set-map
   (fn [db [_ id]]
     (let [loc (array (get-in db [:my-location :lat]) (get-in db [:my-location :lon]))
-          mapb (.. (oget js/L "mapbox") (map "map") (setView loc 13) (addLayer (js/L.mapbox.styleLayer "mapbox://styles/mapbox/dark-v8")))]
+          mapb (.. (oget js/L "mapbox") (map "map") (setView loc 13) (addLayer (js/L.mapbox.styleLayer "mapbox://styles/jacobmbr/cio9dnfon002badnmmepi5z9c")))] ;mapbox://styles/mapbox/dark-v8
+
     (assoc db :map (.. mapb (removeControl (oget mapb "zoomControl")))))))
 
 (register-handler

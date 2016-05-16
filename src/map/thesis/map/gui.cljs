@@ -6,6 +6,7 @@
             [re-frame.core :refer [dispatch dispatch-sync subscribe]]
             [cljs.core.async :refer [put! timeout]]
             [goog.string :as gs]
+            [cljs.pprint :refer [pprint]]
             [clojure.string :refer [split]]
             [chromex.support :refer-macros [oget]]
             [thesis.content-script.animation :as anim]
@@ -26,7 +27,7 @@
 
     (r/create-class
       {:component-did-mount
-       #(reset! show true)
+       #(js/setTimeout (fn [] (reset! show true)) (* 20 idx))
        :display-name "history-item"
        :reagent-render
        (fn [text cnt idx]
@@ -39,9 +40,10 @@
                [:div {:style {:flex "0 0 20%"}} [:div {:style {:text-align "right"
                                                                :padding-right "10px"
                                                                :padding-bottom "15px"
+                                                               :color (if cnt "white" "black")
                                                                :font-size "1em"
                                                                ;:font-size (str (+ 12 (min 12 (/ cnt 10))) "px")
-                                                               }} cnt]]
+                                                               }} (if cnt cnt 0)]]
                [:div {:style {:flex "0 8 80%"
                                :border-left "1px solid white"
                                :font-size "1em"
@@ -68,16 +70,18 @@
        :reagent-render
        (fn [this]
          [:div {:style {;:background-color "rgba(100,100,100, 0.2)"
-                        :background "linear-gradient(to right, rgba(0,0,0,1) 0%,rgba(0,0,0,0) 100%)"
-                        :height "100vh"
+                        ;:height "100vh"
                         :top "0"
                         :left "0"
+                        :min-height "100%"
                         :flex "0 0 100%"
                         :pointer-events "auto"
                         :overflow-y "auto"
                         :overflow-x "hidden"}} 
-            [:div {:style {:height "60px"
-                           :width "100%"}} [:a {:on-click (anim/toggle-handler move?)} "Clickme"]]
+            [anim/pop-when @has-counts?
+             [:div {:style {:height "50px"
+                           :padding-left "20%"
+                           :width "100%"}} [:h1 {:on-click (anim/toggle-handler move?)} "History"]]]
           [:div {:style {:margin-left (str @margin "%")
                          :width "200%"
                          :display "flex"
@@ -139,19 +143,33 @@
 
 (defn site-infobox []
   (let [entry (subscribe [:site-info])
+        site-name (reaction (get @entry :domain))
         site-info (reaction (get @entry :data))
+        domain-counts (reaction (-> (reduce #(update %1 (get %2 "domain") inc) {} @site-info)
+                                    (dissoc @site-name)))
         domain (reaction (get @entry :domain))
-        loading? (subscribe [:loading-site-info?])]
+        loading? (subscribe [:loading-site-info?])
+        not-loading? (reaction (not @loading?))]
     (fn []
-       (if-not @loading? 
-         [:div 
-          [:h1 "Who saw you on " @domain] [:a {:href "" :on-click (fn [e] (.preventDefault e) (dispatch [:display-info-box false]))} "Close x"]
-           [:h2 (count @site-info) " third parties saw you on this site " @domain "."]
-           [:span (for [x @site-info] 
-                    (let [dom (get x "domain")]
-                      ^{:key x} [:p [:a {:href "#" :on-click #(dispatch [:show-domain-info dom])} (str dom)]]))]
-         ]
-         [:h1 "loading..."]))))
+       [anim/fade-when @not-loading? 
+         [:div {:style {:width "90%"
+                        :margin "60px auto"
+                        :pointer-events "auto"
+                        :border-top "1px solid white"
+                        :background-color "rgba(0,0,0,0.0)"
+                        ;:background "linear-gradient(to bottom, rgba(0,0,0,1) 0%,rgba(0,0,0,0) 30%)"
+                        }}
+          [:div.report-content {:style {:margin "0 0 0 20px"}}
+            [:h1 {:style {:font-size "2em"}} @domain [:span {:style {:color "#aaa"}} "  saw you 25"]]
+            [:pre (with-out-str (pprint @domain-counts))]
+            [:a {:href "" :on-click (fn [e] (.preventDefault e) (dispatch [:display-info-box false]))} "Close x"]
+             [:h2 (count @site-info) " third parties saw you on this site " @domain "."]
+             ;[:span (for [x @site-info] 
+                      ;(let [dom (get x "domain")]
+                        ;^{:key x} [:p [:a {:href "#" :on-click #(dispatch [:show-domain-info dom])} (str dom)]]))]
+           ]]]
+           ;[:h1 "loading..."]
+           )))
 
 (defn infobox []
   (let [view-mode (subscribe [:view-mode])]
@@ -167,9 +185,9 @@
                          ;:padding "40px 0 0 0"
                          :transition "all 0.5s ease"
                          :pointer-events "auto"
-                         :height "100vh"
+                         ;:height "100vh"
                          :overflow "auto"
-                         :background-color "rgba(100,100,100, 0.1)"}}
+                         :background-color "rgba(100,100,100, 0.0)"}}
              (if (= "domain" @view-mode) [domain-infobox])
              (if (= "site" @view-mode) [site-infobox])
              ]
@@ -223,6 +241,7 @@
                        :position "fixed"
                        :top "0px"}} [mapbox]])
 
+
         [:div {:style {:display "flex"
                        :width "100%"
                        :position "absolute"
@@ -231,13 +250,25 @@
                        :pointer-events "none"
                        :flex-flow "row"}}
           [:div {:style {:flex "0 0 30%"
+                         :background "linear-gradient(to right, rgba(0,0,0,1) 0%,rgba(0,0,0,0) 100%)"
+                         :height "100vh"
                          :display "flex"
+                         :pointer-events "auto"
                          :flex-flow "row"
                          :overflow-x "hidden"}}
            [history]]
           [:div {:style {:flex "0 0 70%"
+                         :height "100vh"
+                         :overflow-y "auto"
                          :pointer-events "none"}}
             (if @display? [infobox])]
+          [:div {:style {:display "block"
+                         :position "absolute"
+                         :z-index "-1"
+                         :top "0px"
+                         :width "100%"
+                         :background "linear-gradient(to bottom, rgba(0,0,0,0.5) 0%,rgba(0,0,0,0) 100%)"
+                         :height "10%"}}]
            ;[show-state]
            ;[display-domains]
        ]])))

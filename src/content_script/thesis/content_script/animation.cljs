@@ -9,6 +9,7 @@
    [reagent.ratom :as ratom])
   (:require
    [reagent.core :as reagent]
+   [chromex.logging :refer-macros [log]]
    [goog.events :as events]
    [goog.events.EventType :as EventType]
    [goog.dom :as dom]))
@@ -23,6 +24,36 @@
     (<= t 0) a
     (>= t duration) b
     :else (+ a (/ (* t (- b a)) duration))))
+
+(defn fade-when
+  "Wraps a component to animate creation and destruction.
+  Takes a condition ratom and a vector or value to be rendered.
+  Options can contain duration (milliseconds)
+  and easing (a function that takes a b duration t)."
+  ([condition then] (fade-when condition then {}))
+  ([condition then options]
+   (let [anim (reagent/atom {:from condition})]
+     (log "fade called")
+     (fn a-fade-when [condition then options]
+       (when (not= condition (:from @anim))
+         (reset! anim {:start (now)
+                       :from condition
+                       :frame 0}))
+       (let [{:keys [duration easing]
+              :or {duration 300
+                   easing interpolate}} options
+             t (->> @anim :start (- (now)))
+             scale (easing 0 1 duration t)
+             scale (if condition scale (- 1 scale))]
+         (if (< t duration)
+           (do
+             ;TODO NOte: I changed this from setTimout
+             (js/requestAnimationFrame #(swap! anim update :frame inc))
+             [:div
+              {:style {:transform (str "translate(0,0)")
+                       :opacity scale}}
+              then])
+           (when condition then)))))))
 
 (defn pop-when
   "Wraps a component to animate creation and destruction.
@@ -49,6 +80,7 @@
              (js/requestAnimationFrame #(swap! anim update :frame inc))
              [:div
               {:style {:transform (str "scale(" scale ")")
+                       :transform-origin "0 0"
                        :opacity scale}}
               then])
            (when condition then)))))))
