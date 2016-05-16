@@ -205,7 +205,8 @@
           (if @geojson
             (do 
               (.. @mapb (addLayer (.. @cluster-layer (addLayer (.. js/L (geoJson @geojson))))))
-              (.. @mapb (fitBounds (.. @cluster-layer (getBounds)) #js {"paddingTopLeft" (array 400 400)})))))
+              (.. @mapb (fitBounds (.. @cluster-layer (getBounds)) #js {"paddingTopLeft" (array 400 400)
+                                                                        "maxZoom" 14})))))
        :component-did-mount
        (fn [this]
          (dispatch-sync [:set-map "map"])
