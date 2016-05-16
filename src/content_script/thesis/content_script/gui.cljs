@@ -158,7 +158,7 @@
       [:div 
        ;[anim/timeout #(reset! tilt 45) 100]
        [:a {:href "#"
-            :on-click #(dispatch [:handle-click "site" tabUrl])}
+            :on-click #(dispatch [:handle-click "site" @tabUrl])}
         [:img {:on-click #(dispatch [:exit])
               :src @img-data
               :id "ext-screenshot"
