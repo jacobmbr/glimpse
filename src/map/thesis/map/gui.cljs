@@ -155,8 +155,10 @@
          [:div {:style {:width "90%"
                         :margin "60px auto"
                         :pointer-events "auto"
+                        :text-shadow "0 0 10px black"
+                        ;:box-shadow "0 0 20px rgba(0,0,0,0.2)"
                         :border-top "1px solid white"
-                        :background-color "rgba(0,0,0,0.0)"
+                        ;:background-color "rgba(0,0,0,0.1)"
                         ;:background "linear-gradient(to bottom, rgba(0,0,0,1) 0%,rgba(0,0,0,0) 30%)"
                         }}
           [:div.report-content {:style {:margin "0 0 0 20px"}}

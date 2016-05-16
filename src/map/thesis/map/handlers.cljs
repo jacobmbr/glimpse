@@ -205,6 +205,28 @@
   (fn [db [_ m]]
     (assoc db :mouse m)))
 
+(defn str->latlon [st]
+  (let [strs (split st #"\|")]
+    (array (get strs 1) (first strs))))
+
+(defn geojson-from-domain-info [data]
+  (clj->js {:type "FeatureCollection"
+            :features (reduce #(conj %1 {:type "Feature"
+                                         :properties {:hostname (get %2 "hostname")
+                                                      :timestamp (get %2 "timestamp")
+                                                      :tabUrl (get %2 "tabUrl")
+                                                      :count 1
+                                                      :domain (get %2 "domain")}
+                                         :geometry {:type "Point"
+                                                    :coordinates (str->latlon (get %2 "location"))}}) [] data)}))
+
+(register-handler
+  :domain-or-site-to-clusters
+  (fn [db [_ dom-or-site]]
+    (log (if (= dom-or-site "site") :site-info :domain-info))
+    (dispatch [:set-marker-clusters])
+    (assoc db :geojson (geojson-from-domain-info (get-in db [(if (= dom-or-site "site") :site-info :domain-info) :data])))))
+
 (register-handler
   :make-geojson
   (fn [db [_ _]]
@@ -246,13 +268,16 @@
   (fn [db [_ _]]
     (let [mapb (get db :map)
           geojson (get db :geojson)
+          cluster-layer (get db :cluster-layer)
           clusters (atom nil)]
+      (if cluster-layer (.. mapb (removeLayer cluster-layer)))
       (reset! clusters (L.MarkerClusterGroup. #js {"showCoverageOnHover" "false" 
                                                    "singleMarkerMode" "true"
                                                    "zoomToBoundsOnClick" "false"
                                                    "iconCreateFunction" #(js/L.divIcon #js {"html" (make-marker-html (.getAllChildMarkers %))})}))
       (.. mapb (addLayer (.. @clusters (addLayer (.. js/L (geoJson geojson))))))
-      (assoc db :added-markers? true))))
+      (assoc db :added-markers? true
+                :cluster-layer @clusters))))
 
 (register-handler :show-state (fn [db [_ v]] (assoc db :show-state v)))
 
@@ -283,6 +308,7 @@
   :show-site-info
   (fn [db [_ domain]]
     (dispatch [:get-site-info domain])
+    (dispatch [:domain-or-site-to-clusters "site"])
     (assoc db :view-mode "site"
               :display-info-box? true
               :loading-site-info? true)))
@@ -291,6 +317,7 @@
   :show-domain-info
   (fn [db [_ domain]]
     (dispatch [:get-domain-info domain])
+    (dispatch [:domain-or-site-to-clusters "domain"])
     (assoc db :display-info-box? true
            :view-mode "domain"
            :loading-domain-info? true)))
