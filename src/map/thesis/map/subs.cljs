@@ -32,4 +32,6 @@
 (register-sub :show-state? (fn [db _] (reaction (get @db :show-state))))
 (register-sub :site-counts (fn [db _] (reaction (get @db :site-counts))))
 (register-sub :map (fn [db _] (reaction (get @db :map))))
+(register-sub :cluster-layer (fn [db _] (reaction (get @db :cluster-layer))))
+(register-sub :cluster-bounds (fn [db _] (reaction (get @db :cluster-bounds))))
 

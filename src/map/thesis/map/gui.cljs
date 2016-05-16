@@ -207,22 +207,21 @@
 
 (defn mapbox []
   (let [mapb (subscribe [:map])
-        geojson (subscribe [:geojson])
+        cluster-bounds (subscribe [:cluster-bounds])
         geoloading? (subscribe [:loading-location-counts?])
         loc (subscribe [:my-location])]
     (r/create-class
       {:display-name "MapBox Component"
        :component-did-update
        #(do 
-          (log "update mapbox")
-          (dispatch [:set-marker-clusters]))
+          (log "update mapbox" @cluster-bounds))
        :component-did-mount
        (fn [this]
          (dispatch-sync [:set-map "map"])
          (destroy! (by-class "leaflet-control-attribution")))
        :reagent-render
        (fn []
-         @geojson
+         @cluster-bounds
          [:div {:id "map"
                      :style {:position "fixed"
                              :top "0px"

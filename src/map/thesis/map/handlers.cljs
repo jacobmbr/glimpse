@@ -276,8 +276,10 @@
                                                    "zoomToBoundsOnClick" "false"
                                                    "iconCreateFunction" #(js/L.divIcon #js {"html" (make-marker-html (.getAllChildMarkers %))})}))
       (.. mapb (addLayer (.. @clusters (addLayer (.. js/L (geoJson geojson))))))
+      (.. mapb (fitBounds (.. @clusters (getBounds)) #js {"paddingTopLeft" (array 400 400)}))
       (assoc db :added-markers? true
-                :cluster-layer @clusters))))
+                :cluster-layer @clusters
+                :cluster-bounds (.. @clusters (getBounds))))))
 
 (register-handler :show-state (fn [db [_ v]] (assoc db :show-state v)))
 
