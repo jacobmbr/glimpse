@@ -19,6 +19,7 @@
 (register-sub :data (fn [db _] (reaction (get @db :data))))
 
 (register-sub :img-scale (fn [db _] (reaction (get @db :img-scale))))
+(register-sub :img-grayscale (fn [db _] (reaction (get @db :img-grayscale))))
 (register-sub :show-text? (fn [db _] (reaction (get @db :show-text?))))
 (register-sub :align? (fn [db _] (reaction (get @db :align?))))
 (register-sub :dim (fn [db _] (reaction (get @db :dim))))

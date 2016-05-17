@@ -141,8 +141,11 @@
   (let [tilt (r/atom 0)
         tabUrl (subscribe [:tab-url])
         rotation (anim/spring tilt)
+        grayscale (subscribe [:img-grayscale])
+        grayscale-interpolated (anim/interpolate-to grayscale {:duration 500})
         scale-sub (subscribe [:img-scale])
-        scale (anim/spring scale-sub {:mass 40 :damping 2})
+        scale (anim/interpolate-to scale-sub {:duration 500})
+        ;scale (anim/spring scale-sub {:mass 40 :damping 2})
         img-pos (subscribe [:img-pos])
         img-data (subscribe [:img-data])
         align? (subscribe [:align?])
@@ -164,15 +167,17 @@
               :id "ext-screenshot"
               :style {:margin "0 auto"
                       :width "100%"
+                      :webkit-filter (str "grayscale(" @grayscale-interpolated "%) opacity(" (* (/ 100 @grayscale-interpolated) 50) "%)")
+                      :filter (str "grayscale(" @grayscale-interpolated "%) opacity(" (* (/ @grayscale-interpolated 100) 50) "%)")
                       :transform (str 
                                    "scale(" @scale "," @scale ") "
                                    (if @align? (str "translate(" @xsp "px," @ysp "px)")))}}]]])))
 
 (defn root []
   [:div
+   [screenshot]
    [satellites]
    [heading]
-   [screenshot]
    ;[debug]
    ])
 
@@ -201,12 +206,12 @@
       (.. js/window (addEventListener "resize" #(dispatch [:resize [(.-innerWidth js/window) (.-innerHeight js/window)]])))
 
       (js/setTimeout #(dispatch [:scale-down-img] 0))
-      (js/setTimeout #(dispatch [:data-satellites]) 500)
+      (js/setTimeout #(dispatch [:data-satellites]) 1000)
       (js/setTimeout #(dispatch [:handle-info true]) 2000)
       ;(js/setTimeout #(dispatch [:shuffle]) 5000)
 
       ;(js/setTimeout #(dispatch [:data-satellites]) 4000)
       ;(js/setTimeout #(dispatch [:update-img-pos [(-> dim (first) (/ 2) (* -1)) 0]]) 3000)
-      (js/setTimeout #(dispatch [:update-img-pos]) 2000)
+      ;(js/setTimeout #(dispatch [:update-img-pos]) 2000)
 
       (r/render [root] (by-id "ext-canvas-container")))))

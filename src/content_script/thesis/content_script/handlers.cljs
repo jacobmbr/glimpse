@@ -29,6 +29,7 @@
        :align? false
        :img-pos [0 0]
        :img-scale 1
+       :img-grayscale 1
        :left-padding 0
        :tab-url tabUrl
        :show-text? false
@@ -41,7 +42,7 @@
 (register-handler
   :scale-down-img
   (fn [db [_]]
-    (assoc db :img-scale 0.3)))
+    (assoc db :img-scale 0.8 :img-grayscale 100)))
 
 (register-handler
   :kill
