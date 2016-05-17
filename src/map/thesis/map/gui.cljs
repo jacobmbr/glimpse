@@ -45,7 +45,7 @@
                                                                ;:font-size (str (+ 12 (min 12 (/ cnt 10))) "px")
                                                                }} (if cnt cnt 0)]]
                [:div {:style {:flex "0 8 80%"
-                               :border-left "1px solid white"
+                               :border-left "1px solid rgb(3, 201, 200)"
                                :font-size "1em"
                                ;:font-size (str (+ 12 (min 12 (/ cnt 10))) "px")
                                }}
@@ -132,29 +132,45 @@
         site-info (reaction (get @entry :data))
         domain-counts (reaction (-> (reduce #(update %1 (get %2 "domain") inc) {} @site-info)
                                     (dissoc @site-name)))
+        counts-array (reaction (->>
+                                 (reduce-kv #(conj %1 [%2 %3]) [] @domain-counts)
+                                 (sort-by #(peek %) >)))
         domain (reaction (get @entry :domain))
         loading? (subscribe [:loading-site-info?])
         not-loading? (reaction (not @loading?))]
     (fn []
        [anim/fade-when @not-loading? 
-         [:div {:style {:width "90%"
-                        :margin "60px auto"
-                        :pointer-events "auto"
-                        :text-shadow "0 0 10px black"
-                        ;:box-shadow "0 0 20px rgba(0,0,0,0.2)"
-                        :border-top "1px solid white"
-                        ;:background-color "rgba(0,0,0,0.1)"
-                        ;:background "linear-gradient(to bottom, rgba(0,0,0,1) 0%,rgba(0,0,0,0) 30%)"
-                        }}
-          [:div.report-content {:style {:margin "0 0 0 20px"}}
-            [:h1 {:style {:font-size "2em"}} @domain [:span {:style {:color "#aaa"}} "  saw you 25"]]
-            [:pre (with-out-str (pprint @domain-counts))]
-            [:a {:href "" :on-click (fn [e] (.preventDefault e) (dispatch [:display-info-box false]))} "Close x"]
-             [:h2 (count @site-info) " third parties saw you on this site " @domain "."]
-             ;[:span (for [x @site-info] 
-                      ;(let [dom (get x "domain")]
-                        ;^{:key x} [:p [:a {:href "#" :on-click #(dispatch [:show-domain-info dom])} (str dom)]]))]
-           ]]]
+         [:div 
+          [:div {:style {:width "90%" :padding "20px 0 20px 60px" :color "rgb(3, 201, 200)"}} [:span "Website"]]
+           [:div {:style {:width "90%"
+                          :margin "0px auto"
+                          :pointer-events "auto"
+                          :text-shadow "0 0 10px black"
+                          ;:box-shadow "0 0 20px rgba(0,0,0,0.2)"
+                          :border-top "1px solid rgb(3, 201, 200)"
+                          ;:background-color "rgba(0,0,0,0.1)"
+                          ;:background "linear-gradient(to bottom, rgba(0,0,0,1) 0%,rgba(0,0,0,0) 30%)"
+                          }}
+            [:div.report-content {:style {:margin "0 0 0 20px"}}
+              [:h1 {:style {:color "rgb(3, 201, 200) !important" :font-size "2em"}} @domain [:span {:style {:color "white"}} " sent information about you to these " (count @counts-array) " third parties: "]]
+              [:div {:style {:max-height "400px" 
+                             :border "1px solid #444"
+                             :padding "10px 10px 10px 10px"
+                             :overflow "auto"}}
+                (for [x @counts-array]
+                  ^{:key x} [:div {:style {:font-size (str (+ 14 (peek x)) "px")
+                                           :float "left" 
+                                           ;:line-height "20px"
+                                           :width "50%"}} 
+                             [:span {:style {:color "aaa"}} (peek x)] 
+                             "  " 
+                             [:span {:style {:color "rgb(232, 219, 3)"}} (str (first x))]])]
+              ;[:a {:href "" :on-click (fn [e] (.preventDefault e) (dispatch [:display-info-box false]))} "Close x"]
+               ;[:h2 (count @site-info) " third parties saw you on this site " @domain "."]
+               ;[:span (for [x @site-info] 
+                        ;(let [dom (get x "domain")]
+                          ;^{:key x} [:p [:a {:href "#" :on-click #(dispatch [:show-domain-info dom])} (str dom)]]))]
+             ]]]]
            ;[:h1 "loading..."]
            )))
 

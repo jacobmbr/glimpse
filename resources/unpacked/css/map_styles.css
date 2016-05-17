@@ -7,7 +7,7 @@ h1 {font-weight: 400}
   font-size: 13px;
   font-family "Helvetica Neue";
 }
-a, span, p, pre, h1, h2 {color: white}
+a,  p, pre, h2 {color: white}
 a {
   color: white;
   font-size 13px;
