@@ -14,6 +14,7 @@
 
 (register-sub :domain-info (fn [db _] (reaction (get @db :domain-info))))
 (register-sub :site-info (fn [db _] (reaction (get @db :site-info))))
+(register-sub :site-name (fn [db _] (reaction (get-in @db [:site-info :domain]))))
 
 (register-sub :loading-site-info?  (fn [db _] (reaction (get @db :loading-site-info?))))
 (register-sub :loading-domain-info?  (fn [db _] (reaction (get @db :loading-domain-info?))))
@@ -27,7 +28,10 @@
 (register-sub :distinct-locations (fn [db _] (reaction (get @db :distinct-locations)))) 
 (register-sub :loading-domains?  (fn [db _] (reaction (get @db :loading-domains?))))
 (register-sub :distinct-domains (fn [db _] (reaction (get @db :distinct-domains))))
+
 (register-sub :view-mode (fn [db _] (reaction (get @db :view-mode))))
+(register-sub :history-mode (fn [db _] (reaction (get @db :history-mode))))
+
 (register-sub :state (fn [db _] (reaction @db)))
 (register-sub :show-state? (fn [db _] (reaction (get @db :show-state))))
 (register-sub :site-counts (fn [db _] (reaction (get @db :site-counts))))

@@ -95,10 +95,19 @@
 (register-handler
   :handle-site-info
   (fn [db [_ res]]
-    (log "received site info: " res)
-    (dispatch [:domain-or-site-to-clusters "site"])
-    (assoc db :site-info res
-              :loading-site-info? false)))
+    (let [dname (get res :domain)
+          data (get res :data)
+          domain-counts (-> (reduce #(update %1 (get %2 "domain") inc) {} (get res :data)) 
+                                             (dissoc (get res :domain)))
+          counts-array (->> (reduce-kv #(conj %1 [%2 %3]) [] domain-counts)
+                            (sort-by #(peek %) >))]
+      (log "received site info: " res)
+      (dispatch [:domain-or-site-to-clusters "site"])
+      (assoc db :site-info {:domain dname
+                            :data data
+                            :domain-counts domain-counts
+                            :counts-array counts-array}
+                :loading-site-info? false))))
 
 (register-handler
   :display-info-box
@@ -121,7 +130,6 @@
 
 (register-handler
   :handle-location
-  debug
   (fn [db [_ res]]
     (let [loc (js->clj res :keywordize-keys true)]
       (if (nil? (:lat loc)) (dispatch [:get-my-location]))
@@ -305,24 +313,40 @@
 (register-handler 
   :view-mode 
   (fn [db [_ m]] 
-    (log "setting view mode: " (get db :view-mode))
     (assoc db :view-mode m)))
+
+(register-handler
+  :back-to-root
+  (fn [db [_ _]]
+    (let [toggler (get db :toggler)
+          hist-mode (get db :history-mode)]
+      (if (or (nil? hist-mode)
+              (= "domain" hist-mode)) (toggler))
+      (assoc db :history-mode "site"))))
 
 (register-handler
   :show-site-info
   (fn [db [_ domain]]
-    (dispatch [:get-site-info domain])
-    (assoc db :view-mode "site"
-              :display-info-box? true
-              :loading-site-info? true)))
+    (let [toggler (get db :toggler)
+          hist-mode (get db :history-mode)]
+      (if (or (nil? hist-mode)
+              (= "site" hist-mode)) (toggler))
+      (dispatch [:get-site-info domain])
+      (assoc db :history-mode "domain"
+                :view-mode "site"
+                :display-info-box? true
+                :loading-site-info? true))))
 
 (register-handler
   :show-domain-info
   (fn [db [_ domain]]
-    (dispatch [:get-domain-info domain])
-    (assoc db :display-info-box? true
-           :view-mode "domain"
-           :loading-domain-info? true)))
+    (let [toggler (get db :toggler)]
+      (if (= "site" (get db :history-mode)) (do (log "toggle from domain") (toggler)))
+      (dispatch [:get-domain-info domain])
+      (assoc db :display-info-box? true
+                ;:history-mode "site"
+                :view-mode "domain"
+                :loading-domain-info? true))))
 
 (register-handler
   :init-box
