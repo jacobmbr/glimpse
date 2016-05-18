@@ -3,7 +3,7 @@
   (:require-macros [cljs.core.async.macros :refer [go go-loop]])
   (:require [goog.string :as gstring]
             [goog.string.format]
-            [cljs.core.async :refer [<! chan close!]]
+            [cljs.core.async :refer [<! chan close! sliding-buffer]]
             [chromex.logging :refer-macros [log info warn error group group-end]]
             [chromex.support :refer-macros [oget]]
             [chromex.chrome-event-channel :refer [make-chrome-event-channel]]
@@ -169,13 +169,13 @@
     (log "BACKGROUND: leaving main event loop")))
 
 (defn boot-chrome-event-loop! []
-  (let [chrome-event-channel (make-chrome-event-channel (chan))]
+  (let [chrome-event-channel (make-chrome-event-channel (chan (sliding-buffer 1000)))]
     (tabs/tap-all-events chrome-event-channel)
     (runtime/tap-all-events chrome-event-channel)
     (storage/tap-all-events chrome-event-channel)
     (browser-action/tap-on-clicked-events chrome-event-channel)
     (web-request/tap-on-before-request-events chrome-event-channel (clj->js {:urls ["http://*/*", "https://*/*"]}))
-    (web-request/tap-on-response-started-events chrome-event-channel (clj->js {:urls ["http://*/*", "https://*/*"]}))
+    ;(web-request/tap-on-response-started-events chrome-event-channel (clj->js {:urls ["http://*/*", "https://*/*"]}))
     (run-chrome-event-loop! chrome-event-channel)))
 
 ; -- main entry point -------------------------------------------------------------------------------------------------------
