@@ -217,18 +217,23 @@
 
 (defn str->latlon [st]
   (let [strs (split st #"\|")]
-    (array (get strs 1) (first strs))))
+    ;(log st (get strs 1) (first strs))
+    ; TODO Horrible Hack to fix null locations
+    (if (= "" st)
+      (array  "-73.960574" "40.731959")
+      (array (get strs 1) (first strs)))))
 
 (defn geojson-from-domain-info [data]
   (clj->js {:type "FeatureCollection"
-            :features (reduce #(conj %1 {:type "Feature"
+            :features (reduce #(do (if (= "" (get %2 "location")) (log %2))
+                                        (conj %1 {:type "Feature"
                                          :properties {:hostname (get %2 "hostname")
                                                       :timestamp (get %2 "timestamp")
                                                       :tabUrl (get %2 "tabUrl")
                                                       :count 1
                                                       :domain (get %2 "domain")}
                                          :geometry {:type "Point"
-                                                    :coordinates (str->latlon (get %2 "location"))}}) [] data)}))
+                                                    :coordinates (str->latlon (get %2 "location"))}})) [] data)}))
 
 (register-handler
   :domain-or-site-to-clusters

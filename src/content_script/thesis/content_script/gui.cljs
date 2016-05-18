@@ -20,6 +20,12 @@
 (def mouse (r/atom [0 0]))
 (def mouseX (reaction (first @mouse)))
 (def mouseY (reaction (peek @mouse)))
+(def ind-domains (r/atom #{}))
+
+(defn add-domain [d]
+  (doseq [el (vec d)] 
+    (if-not (contains? @ind-domains el)
+      (swap! ind-domains conj el))))
 
 
 (defn heading []
@@ -126,10 +132,10 @@
                    :padding-top (str (* 40 @lpsp) "%")
                    :padding-bottom "300px"
                    :padding-left "0"
-                   :height "100%"
+                   :height "50%"
                    :width "100%"
                    :overflow (if @show-text? "scroll" "visible" )}}
-     (log "DATA: " @data)
+     ;(log "DATA: " @data)
      (map-indexed #(do ^{:key %2} [satellite %2 %1]) (keys @sdata))]))
 
 
@@ -167,17 +173,80 @@
               :id "ext-screenshot"
               :style {:margin "0 auto"
                       :width "100%"
-                      :webkit-filter (str "grayscale(" @grayscale-interpolated "%) opacity(" (* (/ 100 @grayscale-interpolated) 50) "%)")
+                      :webkit-filter (str "grayscale(" 
+                                          @grayscale-interpolated 
+                                          "%) opacity(" 
+                                          (* (/ 100 @grayscale-interpolated) 50) 
+                                          "%) brightness(" (* 0.5 (/ 100 @grayscale-interpolated)) ")")
                       :filter (str "grayscale(" @grayscale-interpolated "%) opacity(" (* (/ @grayscale-interpolated 100) 50) "%)")
                       :transform (str 
                                    "scale(" @scale "," @scale ") "
-                                   (if @align? (str "translate(" @xsp "px," @ysp "px)")))}}]]])))
+                                   ;(if @align? (str "translate(" @xsp "px," @ysp "px)"))
+                                   )}}]]])))
+(defn draw-on-canvas [space form vectors n]
+  (log vectors)
+(.clearRect (.-ctx space) 0 0 400 400)
+(let [v (js/Vector. 200 200)]
+  (doseq [i vectors]
+    (.. form (stroke "rgba(180,180,180,0.4)" 2))
+    (.. form (line (.to (js/Pair. 200 200) (js/Point. (first i)))))
+    (.. form (stroke 0) (fill "rgb(232, 219, 3)") (circle (.. (js/Circle. (.rotate2D (first i) (* (.-one_degree js/Const) (peek i)) (js/Point. 200 200))) (setRadius 5)))))
+  (.. form (fill "rgba(3, 201, 200,0.8)") (circle (.. (js/Circle. (js/Point. 200 200)) (setRadius 10))))))
+
+(defn make-vector []
+  (.. (js/Vector. (rand 130) (rand 130)) (moveBy (js/Point. 200 200)) (rotate2D (* (rand 360) (.-one_degree js/Const)) (js/Point. 200 200))))
+
+(defn indicator []
+  (let [d (reaction (count @ind-domains))
+        vectors (r/atom nil)
+        dom-node (r/atom nil)
+        space (r/atom nil)
+        form (r/atom nil)
+        draw-chan (chan)
+        ]
+    (r/create-class
+      {:component-did-mount
+       (fn [ this ]
+         (log @ind-domains)
+         (reset! vectors (reduce #(conj %1 [(make-vector) (+ 0.5 (rand 1.5))]) [] @ind-domains))
+         (reset! dom-node (r/dom-node this))
+         (reset! space (.. (js/CanvasSpace. "my-space") (display "#ext-huge-canvas")))
+         (reset! form (js/Form. @space))
+         (log "space " @space)
+         (go-loop [i 0]
+                  (.requestAnimationFrame js/window #(go (>! draw-chan "hu")))
+                  (draw-on-canvas @space @form @vectors i)
+                  ;(draw-on-canvas @space @form @vectors i)
+                  (<! draw-chan)
+            (recur (inc i))))
+
+       ;:component-did-update
+       ;(fn [] 
+         ;(log @vectors) 
+         ;(dotimes [n (- @d (count @vectors))] (swap! vectors conj (make-vector))))
+
+       :reagent-render
+       (fn a-canvas [] 
+         @ind-domains
+          [:div {:style {:position "absolute"
+                         :width "50%"
+                         :top "0px"
+                         :left "0px"
+                         :height "100%"
+                         :text-align "right"}}
+           [:div {:style {:width "400px"
+                         :height "400px"
+                         :right "0px"
+                         :position "absolute"
+                         :top (str (- (/ (oget js/window "innerHeight") 2) 200) "px")}
+                 :id "ext-huge-canvas"}]])})))
 
 (defn root []
   [:div
    [screenshot]
    [satellites]
    [heading]
+   [indicator]
    ;[debug]
    ])
 
@@ -200,6 +269,7 @@
                            :font-size 0.5
                            )) {} (vec tabdict))
             (reset! data))
+      (reset! ind-domains (reduce #(conj %1 %2) [] @data))
       (dispatch-sync [:initialise-db img dim @data tabId counts core-chan])
       ;(dispatch [:get-counts])
 
