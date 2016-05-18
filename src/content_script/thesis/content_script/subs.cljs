@@ -24,3 +24,5 @@
 (register-sub :align? (fn [db _] (reaction (get @db :align?))))
 (register-sub :dim (fn [db _] (reaction (get @db :dim))))
 (register-sub :left-padding (fn [db _] (reaction (get @db :left-padding))))
+(register-sub :ind-opacity (fn [db _] (reaction (get @db :ind-opacity))))
+(register-sub :show-indicator? (fn [db _] (reaction (get @db :show-indicator?))))

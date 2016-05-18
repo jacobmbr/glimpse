@@ -21,11 +21,12 @@
 (def mouseX (reaction (first @mouse)))
 (def mouseY (reaction (peek @mouse)))
 (def ind-domains (r/atom #{}))
+(def show-ind? (atom false))
 
 (defn add-domain [d]
-  (doseq [el (vec d)] 
+  (doall (doseq [el (vec d)] 
     (if-not (contains? @ind-domains el)
-      (swap! ind-domains conj el))))
+      (swap! ind-domains conj el)))))
 
 
 (defn heading []
@@ -63,7 +64,7 @@
                                       :font-weight "400"
                                       :transition "all 0.3s ease"}} @draw-string]))})))
 
-(defn satellite [dom del]
+(defn satellite [dom del spring?]
   (let [el (subscribe [:in-data dom])
         text (name dom)
         x (r/cursor el [:x])
@@ -71,6 +72,8 @@
         cnt (r/cursor el [:cnt])
         cspring (anim/spring cnt)
         fs (reaction (get @el :font-size))
+        xlin (anim/interpolate-to x {:duration 700})
+        ylin (anim/interpolate-to y {:duration 500})
         xsp (anim/spring x {:damping 2})
         ysp (anim/spring y {:damping 2})
         hasinfo? (subscribe [:has-info?])
@@ -97,7 +100,7 @@
                            ;:padding-left (str (* 100 @lpsp) "%")
                            ;:left (str (+ 20 @xsp)) :top (str @ysp "px")
                            ;:transform (str "translate(" (+ 20 (* @lpsp @ww) @xsp) "px," @ysp "px)")
-                           :transform (str "translate(" (+ 20 @offset @xsp) "px," @ysp "px)")
+                           :transform (str "translate(" (+ @offset (if spring? @xsp @xlin)) "px," (if spring? @ysp @ylin) "px)")
                            }}
              [:a {:href "#"
                   :on-click #(dispatch [:handle-click "domain" text])
@@ -123,6 +126,7 @@
         show-text? (subscribe [:show-text?])
         lp (subscribe [:left-padding])
         lpsp (anim/spring lp {:mass 20 :damping 2})
+        spring? (reaction (if (> (count @data) 50) false true))
         align? (subscribe [:align?])]
     [:div {:style {:position "fixed" 
                    ;:left (if @align? "50%" "0")
@@ -132,11 +136,11 @@
                    :padding-top (str (* 40 @lpsp) "%")
                    :padding-bottom "300px"
                    :padding-left "0"
-                   :height "50%"
+                   :height "100%"
                    :width "100%"
                    :overflow (if @show-text? "scroll" "visible" )}}
      ;(log "DATA: " @data)
-     (map-indexed #(do ^{:key %2} [satellite %2 %1]) (keys @sdata))]))
+     [:div (doall (map-indexed #(do ^{:key %2} [satellite %2 %1 @spring?]) (keys @sdata)))]]))
 
 
 (defn debug []
@@ -184,35 +188,42 @@
                                    ;(if @align? (str "translate(" @xsp "px," @ysp "px)"))
                                    )}}]]])))
 (defn draw-on-canvas [space form vectors n]
-  (log vectors)
 (.clearRect (.-ctx space) 0 0 400 400)
 (let [v (js/Vector. 200 200)]
   (doseq [i vectors]
     (.. form (stroke "rgba(180,180,180,0.4)" 2))
-    (.. form (line (.to (js/Pair. 200 200) (js/Point. (first i)))))
+    ;(.. form (line (.to (js/Pair. 200 200) (js/Point. (first i)))))
+    (.. form (stroke "rgba(180,180,180,0.2)") (fill "transparent") (circle (.. (js/Circle. (js/Point. 200 200)) (setRadius (.. (first i) (distance (js/Point. 200 200)))))))
     (.. form (stroke 0) (fill "rgb(232, 219, 3)") (circle (.. (js/Circle. (.rotate2D (first i) (* (.-one_degree js/Const) (peek i)) (js/Point. 200 200))) (setRadius 5)))))
-  (.. form (fill "rgba(3, 201, 200,0.8)") (circle (.. (js/Circle. (js/Point. 200 200)) (setRadius 10))))))
+    (.. form (fill "rgba(3, 201, 200,0.8)") (circle (.. (js/Circle. (js/Point. 200 200)) (setRadius 10))))))
 
 (defn make-vector []
   (.. (js/Vector. (rand 130) (rand 130)) (moveBy (js/Point. 200 200)) (rotate2D (* (rand 360) (.-one_degree js/Const)) (js/Point. 200 200))))
 
 (defn indicator []
   (let [d (reaction (count @ind-domains))
-        vectors (r/atom nil)
+        vectors (r/atom [])
         dom-node (r/atom nil)
         space (r/atom nil)
         form (r/atom nil)
         draw-chan (chan)
+        ind-opac (subscribe [:ind-opacity])
+        opac (anim/interpolate-to ind-opac {:duration 1000})
         ]
     (r/create-class
       {:component-did-mount
        (fn [ this ]
-         (log @ind-domains)
-         (reset! vectors (reduce #(conj %1 [(make-vector) (+ 0.5 (rand 1.5))]) [] @ind-domains))
+         ;(reset! vectors (reduce #(conj %1 [(make-vector) (+ 0.5 (rand 1.5))]) [] @ind-domains))
          (reset! dom-node (r/dom-node this))
          (reset! space (.. (js/CanvasSpace. "my-space") (display "#ext-huge-canvas")))
          (reset! form (js/Form. @space))
-         (log "space " @space)
+         (go-loop [i 0]
+           (log i @d @vectors)
+           (<! (timeout 50))
+           (if (< (- i 1) @d)
+             (do (swap! vectors conj [(make-vector) (+ 0.5 (rand 1.5))])
+                 (recur (inc i)))))
+
          (go-loop [i 0]
                   (.requestAnimationFrame js/window #(go (>! draw-chan "hu")))
                   (draw-on-canvas @space @form @vectors i)
@@ -235,6 +246,7 @@
                          :height "100%"
                          :text-align "right"}}
            [:div {:style {:width "400px"
+                          :opacity @opac
                          :height "400px"
                          :right "0px"
                          :position "absolute"
@@ -242,13 +254,15 @@
                  :id "ext-huge-canvas"}]])})))
 
 (defn root []
-  [:div
-   [screenshot]
-   [satellites]
-   [heading]
-   [indicator]
-   ;[debug]
-   ])
+  (let [showind? (subscribe [:show-indicator?])]
+    (fn []
+      [:div
+       [screenshot]
+       [satellites]
+       [heading]
+       (if @showind? [indicator])
+       ;[debug]
+       ])))
 
 (defn get-rand-between [v low up]
   (+ (rand (* up (- v (* low v)))) (* low v)))
@@ -277,7 +291,10 @@
 
       (js/setTimeout #(dispatch [:scale-down-img] 0))
       (js/setTimeout #(dispatch [:data-satellites]) 1000)
+      (js/setTimeout #(dispatch [:set-indicator-opacity 100]) 2500)
+
       (js/setTimeout #(dispatch [:handle-info true]) 2000)
+      (js/setTimeout #(dispatch [:show-indicator true]) 2500)
       ;(js/setTimeout #(dispatch [:shuffle]) 5000)
 
       ;(js/setTimeout #(dispatch [:data-satellites]) 4000)

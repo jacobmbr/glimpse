@@ -30,11 +30,13 @@
        :img-pos [0 0]
        :img-scale 1
        :img-grayscale 1
+       :show-indicator? false
        :left-padding 0
        :tab-url tabUrl
        :show-text? false
        :min-count @mincnt
        :max-count @maxcnt
+       :ind-opacity 0
        :domain-counts counts
        :msg-chan core-chan
        :has-info? false})))
@@ -122,3 +124,13 @@
   (fn [db [_ typ dom]]
     (put! (:msg-chan db) {:typ typ :domain dom})
     db))
+
+(register-handler
+  :set-indicator-opacity
+  (fn [db [_ v]]
+    (assoc db :ind-opacity v)))
+
+(register-handler
+  :show-indicator
+  (fn [db [_ v]]
+    (assoc db :show-indicator? v)))

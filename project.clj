@@ -11,6 +11,7 @@
                  [reagent "0.6.0-alpha"]
                  [binaryage/dirac "0.3.0"]
                  [re-frame "0.7.0"]
+                 [com.andrewmcveigh/cljs-time "0.4.0"]
                  [binaryage/devtools "0.6.1"]
                  [timothypratley/reanimated "0.1.4"]
                  [environ "1.0.2"]]
