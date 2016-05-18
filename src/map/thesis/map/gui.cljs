@@ -81,15 +81,25 @@
            ]]])))
 
 (defn counter [text]
-  (r/create-class 
-    {:display-name "Counter"
-     :component-will-receive-props
-     #(log text)
-     :component-did-update
-     #(log text)
-     :reagent-render
-     (fn [this]
-       [:div (str text)])}))
+  (let [site-name (subscribe [:site-name])
+        loading? (subscribe [:loading-site-info?])
+        hist-mode (subscribe [:history-mode])
+        target-string (reaction (if (or (nil? @hist-mode) (= "site" @hist-mode)) "History" @site-name))
+        draw-string (r/atom "")]
+    (r/create-class 
+      {:display-name "Counter"
+       :component-will-receive-props
+       #(if (and (not @loading?) (not (= @draw-string @target-string)))
+          (go-loop [i 0]
+            (<! (timeout 50))
+            (if (< (- i 1) (count @target-string)) 
+              (do (reset! draw-string (subs @target-string 0 i)) 
+                  (recur (inc i))))))
+       :component-did-update
+       #()
+       :reagent-render
+       (fn [this]
+         [:div @draw-string])})))
 
 (defn history-and-trackers []
   (let [move? (r/atom false)
@@ -99,6 +109,7 @@
         opac (anim/interpolate-if move? 0 1)
         hist-mode (subscribe [:history-mode])
         site-name (subscribe [:site-name])
+        loading-site-info? (subscribe [:loading-site-info?])
         string (reaction (if (= "domain" @hist-mode) (str "Third parties on " @site-name) "History"))]
     (r/create-class
       {:display-name "History-and-Trackers"
@@ -126,7 +137,7 @@
                              :display "flex"
                              :flex-flow "row"}}
                  [history]
-                 [trackers]
+                 (if-not @loading-site-info? [trackers])
                ]]]
       )})))
 
@@ -207,7 +218,7 @@
                           ;:background "linear-gradient(to bottom, rgba(0,0,0,1) 0%,rgba(0,0,0,0) 30%)"
                           }}
             [:div.report-content {:style {:margin "0 0 0 20px"}}
-              [:h1 {:style {:color "rgb(3, 201, 200) !important" :font-size "2em"}} @domain [:span {:style {:color "white"}} " sent information about you to these " (count @counts-array) " third parties."]]
+              [:h1 {:style {:color "rgb(3, 201, 200) !important" :font-size "2em"}} @domain [:span {:style {:color "white"}} " sent information about you to " (count @counts-array) " third parties."]]
               ;[:div {:style {:max-height "400px" 
                              ;:border "1px solid #444"
                              ;:padding "10px 10px 10px 10px"
@@ -274,7 +285,7 @@
       {:display-name "MapBox Component"
        :component-did-update
        #(do 
-          (log "update mapbox" @cluster-bounds " with geoj " @geojson)
+          ;(log "update mapbox" @cluster-bounds " with geoj " @geojson)
           (if @geojson
             (do 
               (.. @mapb (addLayer (.. @cluster-layer (addLayer (.. js/L (geoJson @geojson))))))
