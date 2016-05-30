@@ -1,4 +1,5 @@
 > *Caveat Emptor*: This is a student project under development. It's fully functional, but rough around the edges. Documentation will come, until then, please get in touch if you'd like to: [@jacobmbr](https://twitter.com/jacobmbr)
+
 # Glimpse
 
 > You can only know what you see,
