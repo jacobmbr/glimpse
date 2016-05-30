@@ -7,6 +7,7 @@
 
 _Glimpse is a Chrome extension that reveals the network of entities who watch you on the web, across time, and across space. It shows you who can track where you are on the internet, and where you are in real life._
 
+![screenshot](screenshot.png)
 
 ## Installing v0.1-alpha
 
